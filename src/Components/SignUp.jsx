@@ -98,7 +98,7 @@ const handleSubmit = async (e) => {
                             <span>{loading ? 'Signing up...' : 'Sign Up'}</span>
                         </button>
                     </div>
-                    <p>Already have an Account?<Link to="/Login">Login</Link></p>
+                    <p>Already have an Account?<Link to="/login">Login</Link></p>
                 </form>
         
         </>

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useState} from 'react'
 import {auth} from '../firebase';
 import {signInWithEmailAndPassword} from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -78,7 +78,7 @@ function Login(){
 
                         </button>
                     </div>
-                    <p>Don't have an Account? <Link to="/Signup">Sign Up</Link></p>
+                    <p>Don't have an Account? <Link to="/signup">Sign Up</Link></p>
                 </form>
             </div>
 
