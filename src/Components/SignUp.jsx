@@ -1,109 +1,116 @@
-import React, {useState} from 'react';
-import {auth} from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import {doc, setDoc} from 'firebase/firestore';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
- function SignUp(){
-
+function SignUp() {
     const [email, setEmail] = useState('');
-    const [username, setUserName] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState(null);
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
-const addEmail = (e) => {
-    setEmail(e.target.value);
-};
+    const handleSignUp = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
 
-const addUserName = (e) => {
-    setUserName(e.target.value);
-};
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-const addPassword = (e) => {
-    setPassword(e.target.value);
-};
+            await updateProfile(user, {
+                displayName: username,
+            });
 
-const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+            await setDoc(doc(db, 'users', user.uid), {
+                uid: user.uid,
+                email: user.email,
+                username: username,
+                createdAt: new Date(),
+            });
 
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        console.log('User signed up successfully:', user);
-
-        await setDoc(doc(db, 'users', user.uid), {
-            uid: user.uid,
-            email: user.email,
-            username: username,
-            createdAt: new Date()
-        });
-        console.log('User profile created', user.uid);
-
-        setEmail('');
-        setUserName('');
-        setPassword('');
-    } catch (error) {
-        console.error('Error signing up:', error.message);
-        if (error.code === 'auth/email-already-in-use') {
-            setError('This email is already is use');
-        } else if (error.code === 'auth/invalid-email') {
-            setError('Email address is invalid');
-        } else if (error.code === 'auth/weak-password') {
-            setError('Password should be at least 6 characters long');
-        } else {
-            setError('Sign up failed.Kindly try again.');
+            console.log('User signed up successfully:', user);
+            navigate('/dashboard');
+        } catch (err) {
+            console.error('Error signing up:', err);
+            if (err.code === 'auth/email-already-in-use') {
+                setError('This email is already in use. Please try logging in or use a different email.');
+            } else if (err.code === 'auth/invalid-email') {
+                setError('Please enter a valid email address.');
+            } else if (err.code === 'auth/weak-password') {
+                setError('Password should be at least 6 characters.');
+            } else {
+                setError('Failed to create an account: ' + err.message);
+            }
+        } finally {
+            setLoading(false);
         }
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
-
-
-
-
-
-
-
-    return(
-        <>
-                <h2>
+    return (
+        <div className="px-40 flex flex-1 justify-center py-5">
+            <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
+                <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">
                     Create your account
                 </h2>
-
-                <form onSubmit={handleSubmit}>
-                    <div>
-                        <label>
-                            <p>Email:</p>
-                            <input type="email" placeholder='Enter your email' value={email} onChange={addEmail} required />
-                        </label>
-                    </div>
-                    <div>
-                        <label>
-                            <p>Username:</p>
-                            <input type="text" placeholder="Enter your username" value={username} onChange={addUserName} required />
-                        </label>
-                    </div>
-                    <div>
-                        <label>
-                            <p>Password:</p>
-                            <input type="password" placeholder="Create a password" value={password} onChange={addPassword} required />
-                        </label>
-                    </div>
-                    <div>
-                        <button type="submit">
-                            <span>{loading ? 'Signing up...' : 'Sign Up'}</span>
-                        </button>
-                    </div>
-                    <p>Already have an Account?<Link to="/login">Login</Link></p>
-                </form>
-        
-        </>
+                {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+                <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                    <label className="flex flex-col min-w-40 flex-1">
+                        <p className="text-[#111418] text-base font-medium leading-normal pb-2">Email</p>
+                        <input
+                            placeholder="Email"
+                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-14 placeholder:text-[#60758a] p-4 text-base font-normal leading-normal"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </label>
+                </div>
+                <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                    <label className="flex flex-col min-w-40 flex-1">
+                        <p className="text-[#111418] text-base font-medium leading-normal pb-2">Username</p>
+                        <input
+                            placeholder="Username"
+                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-14 placeholder:text-[#60758a] p-4 text-base font-normal leading-normal"
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                        />
+                    </label>
+                </div>
+                <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                    <label className="flex flex-col min-w-40 flex-1">
+                        <p className="text-[#111418] text-base font-medium leading-normal pb-2">Password</p>
+                        <input
+                            placeholder="Password"
+                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-14 placeholder:text-[#60758a] p-4 text-base font-normal leading-normal"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </label>
+                </div>
+                <div className="flex px-4 py-3">
+                    <button
+                        onClick={handleSignUp}
+                        disabled={loading}
+                        className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 flex-1 bg-[#0c7ff2] text-white text-base font-bold leading-normal tracking-[0.015em] disabled:opacity-50"
+                    >
+                        <span className="truncate">{loading ? 'Signing up...' : 'Sign up'}</span>
+                    </button>
+                </div>
+                <p className="text-[#60758a] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center">
+                    Already have an account?{' '}
+                    <Link to="/login" className="underline">
+                        Log in
+                    </Link>
+                </p>
+            </div>
+        </div>
     );
-
-
 }
+
 export default SignUp;
