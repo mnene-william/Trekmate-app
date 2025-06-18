@@ -18,7 +18,7 @@ function Login() {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             console.log('User logged in successfully!');
-            navigate('/dashboard');
+            navigate('/HomePage');
         } catch (err) {
             console.error('Error logging in:', err);
             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {

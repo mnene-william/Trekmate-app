@@ -26,7 +26,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/create-profile" element={<PrivateRoute><CreateProfile /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/" element={<Navigate to='header' replace />} />
+        <Route path="/" element={<Navigate to='homepage' replace />} />
         <Route path="/explore" element={<h1>Explore Page (Coming Soon!)</h1>} />
         <Route path="/my-trips" element={<h1>My Trips Page (Coming Soon!)</h1>} />
         <Route path="/inbox" element={<h1>Inbox Page (Coming Soon!)</h1>} />
