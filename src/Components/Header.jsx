@@ -31,6 +31,7 @@ function Header() {
                     <h2 className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em]">TrekMate</h2>
                 </div>
                 <div className="flex items-center gap-9">
+                    <Link className="text-[#111418] text-sm font-medium leading-normal" to="/create-trip">Create Trip</Link>
                     <Link className="text-[#111418] text-sm font-medium leading-normal" to="/explore">Explore</Link>
                     <Link className="text-[#111418] text-sm font-medium leading-normal" to="/my-trips">My Trips</Link>
                     <Link className="text-[#111418] text-sm font-medium leading-normal" to="/inbox">Inbox</Link>
