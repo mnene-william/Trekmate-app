@@ -46,7 +46,7 @@ function SignUp() {
             <div className="layout-container flex h-full grow flex-col">
                 <div className="px-40 flex flex-1 justify-center py-5">
                     <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
-                        <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Sign up to Wanderlust</h2>
+                        <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Sign up to TrekMate</h2>
                         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
                         <form onSubmit={handleSignUp} className="flex flex-col max-w-[480px] gap-4 px-4 py-3">
                             <label className="flex flex-col min-w-40 flex-1 w-full">

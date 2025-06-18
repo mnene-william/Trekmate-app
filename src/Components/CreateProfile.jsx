@@ -1,92 +1,98 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../Context/AuthContext'; // To get currentUser
-import { updateProfile } from 'firebase/auth'; // To update displayName
-// import { storage } from '../firebase'; // Uncomment if you integrate Firebase Storage
-// import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'; // Uncomment for Storage functions
-// import { db } from '../firebase'; // Uncomment if you integrate Firestore
-// import { doc, setDoc } from 'firebase/firestore'; // Uncomment for Firestore functions
+import { useAuth } from '../Context/AuthContext';
+import { updateProfile } from 'firebase/auth';
+import {db, storage} from '../firebase';
+import {doc, setDoc} from 'firebase/firestore'
+import {ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 
-function CreateProfile() {
-  const { currentUser } = useAuth();
-  const navigate = useNavigate();
+function CreateProfile(){
+    const {currentUser} = useAuth();
+    const navigate = useNavigate();
 
-  // State for editable profile fields
-  // Initialize with existing data, or empty string if null
-  const [username, setUsername] = useState(currentUser?.displayName || '');
-  const [bio, setBio] = useState('');
-  const [profileImage, setProfileImage] = useState(null); // For the file object
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleNext = async (e) => {
-    e.preventDefault(); // Prevent default form submission
-    setError('');
-    setLoading(true);
+      
+    const [username, setUsername] = useState('');
+    const [bio, setBio] = useState('');
+    const [profileImage, setProfileImage] = useState(null);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+
+        if (!currentUser) {
+            setError("No such user found");
+            setLoading(false);
+            return;
+        }
+        if (username.trim() === ''){
+            setError("Username cannot be empty.")
+            setLoading(false);
+            return;
+        }
+
+        try{
+           let photoURL = currentUser.photoURL;
+           if(profileImage){
+            const imageRef = ref(storage, `profile_pictures/${currentUser.uid}/${profileImage.name}`);
+
+            await uploadBytes(imageRef, profileImage);
+            console.log("Profile image uploaded successfully")
+
+            photoURL = await getDownloadURL(imageRef);
+            console.log("Image download URL:", photoURL);
+           }
+
+
+
+           await updateProfile(currentUser, {
+            displayName: username,
+            photoURL: photoURL,
+           });
+
+           console.log('firebase Auth profile updated(displayName, photoURL)');
+
+           const userDocRef = doc(db, "users", currentUser.uid);
+
+           await setDoc(userDocRef, {
+            username: username,
+            email: currentUser.email,
+            bio: bio, 
+            photoURL: photoURL,
+            createdAt: new Date(),
+           }, {merge: true})
+
+           console.log('User profile data saved');
+           console.log('Profile created successfully')
+           navigate('/dashboard');
+        }
+        catch(error){
+            console.error("An Error occured while creating your profile");
+            setError("Failed to create profile");
+        }
+        finally{
+            setLoading(false);
+        }
+        
+    };
+
+       
     if (!currentUser) {
-      setError("No user found. Please sign up or log in first.");
-      setLoading(false);
-      return;
-    }
-
-    if (username.trim() === '') {
-      setError("Username cannot be empty.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // 1. Update Firebase Auth displayName (username)
-      await updateProfile(currentUser, { displayName: username });
-
-      // 2. Handle Profile Photo Upload (Advanced - requires Firebase Storage setup)
-      // This part is commented out, uncomment and implement when ready for image uploads.
-      /*
-      if (profileImage) {
-        const imageRef = ref(storage, `profile_pictures/${currentUser.uid}/${profileImage.name}`);
-        await uploadBytes(imageRef, profileImage);
-        const photoURL = await getDownloadURL(imageRef);
-        await updateProfile(currentUser, { photoURL: photoURL });
-      }
-      */
-
-      // 3. Handle Bio (Advanced - requires Firebase Firestore/Realtime Database setup)
-      // This part is commented out, uncomment and implement when ready for database storage.
-      /*
-      if (bio.trim() !== '') {
-        await setDoc(doc(db, "users", currentUser.uid), {
-          bio: bio,
-          // You might also want to save displayName and photoURL here for easier querying later
-          displayName: username,
-          email: currentUser.email,
-          // photoURL: currentUser.photoURL, // If updated above
-        }, { merge: true }); // Use merge: true to avoid overwriting other user data
-      }
-      */
-
-      console.log('Profile created/updated:', username, bio, profileImage ? profileImage.name : 'No image');
-      navigate('/dashboard'); // Navigate to dashboard after profile creation/update
-    } catch (err) {
-      console.error("Error creating profile:", err);
-      setError("Failed to create profile: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleImageChange = (e) => {
-    if (e.target.files[0]) {
-      setProfileImage(e.target.files[0]);
-      // Optional: Add a preview of the image
-    }
-  };
-
-  return (
-    // This div encapsulates the entire page layout for CreateProfile, including its specific header
+    return (
+      <div className="flex flex-1 justify-center items-center py-5" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+        <p className="text-[#111418] text-base font-normal leading-normal">Please log in or sign up to create your profile.</p>
+        <button onClick={() => navigate('/login')} className="ml-4 px-4 py-2 rounded-lg bg-[#0c7ff2] text-white text-base font-bold leading-normal">Go to Login</button>
+      </div>
+    );
+  }
+   return(<>
     <div className="relative flex size-full min-h-screen flex-col bg-white overflow-x-hidden" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
       <div className="layout-container flex h-full grow flex-col">
-        {/* Specific Header for this profile creation flow */}
+        
         <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f5] px-10 py-3">
           <div className="flex items-center gap-4 text-[#111418]">
             <div className="size-4">
@@ -97,10 +103,10 @@ function CreateProfile() {
                 ></path>
               </svg>
             </div>
-            <h2 className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em]">Wanderlust</h2>
+            <h2 className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em]">TrekMate</h2>
           </div>
           <button
-            onClick={handleNext} // Attach handler
+            onClick={handleSubmit} 
             disabled={loading}
             className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f0f2f5] text-[#111418] text-sm font-bold leading-normal tracking-[0.015em] disabled:opacity-50"
           >
@@ -108,13 +114,14 @@ function CreateProfile() {
           </button>
         </header>
 
-        {/* Main content area for the form, centered */}
+        
         <div className="px-40 flex flex-1 justify-center py-5">
           <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
             <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Create your profile</h2>
 
             {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
+            
             <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
               <label className="flex flex-col min-w-40 flex-1">
                 <p className="text-[#111418] text-base font-medium leading-normal pb-2">Username</p>
@@ -127,6 +134,7 @@ function CreateProfile() {
               </label>
             </div>
 
+            
             <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
               <label className="flex flex-col min-w-40 flex-1">
                 <p className="text-[#111418] text-base font-medium leading-normal pb-2">Bio (optional)</p>
@@ -139,6 +147,7 @@ function CreateProfile() {
               </label>
             </div>
 
+            
             <h3 className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Profile photo</h3>
             <div className="flex flex-col p-4">
               <div className="flex flex-col items-center gap-6 rounded-lg border-2 border-dashed border-[#dbe0e6] px-6 py-14">
@@ -154,20 +163,21 @@ function CreateProfile() {
                   <input
                     id="profile-upload"
                     type="file"
-                    accept="image/*" // Accept only image files
-                    className="hidden" // Hide the default file input
-                    onChange={handleImageChange}
+                    accept="image/*"
+                    className="hidden" 
+                    onChange={(e) => { if (e.target.files[0]) setProfileImage(e.target.files[0]); }} // Inline handler for convenience
                   />
                 </label>
-                {/* Display selected file name */}
                 {profileImage && <p className="text-sm text-gray-500 mt-2">{profileImage.name}</p>}
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    </div>  
 
+    
+   
+   </>);
+}
 export default CreateProfile;
