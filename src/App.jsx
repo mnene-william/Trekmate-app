@@ -5,6 +5,8 @@ import SignUp from './Components/SignUp'
 import Login from './Components/Login';
 import Dashboard from './Components/Dashboard';
 import CreateProfile from './Components/CreateProfile';
+import Header from './Components/Header';
+import PrivateRoute from './Components/PrivateRoute';
 
 
 
@@ -16,10 +18,13 @@ function App() {
     <>
     
       <Routes>
+      
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
+
+        <Route path="/create-profile" element={<PrivateRoute><CreateProfile /></PrivateRoute>} />
+
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/create-profile" element={<CreateProfile />} />
         <Route path="/" element={<Navigate to="dashboard" replace />} />
       </Routes>
 
