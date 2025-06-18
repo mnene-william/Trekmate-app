@@ -24,7 +24,7 @@ function SignUp() {
 
         try {
             await signup(email, password);
-            navigate('/header');
+            navigate('/create-profile');
         } catch (err) {
             if (err.code === 'auth/email-already-in-use') {
                 setError('This email address is already in use. Please log in or use a different email.');

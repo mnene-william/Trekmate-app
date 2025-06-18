@@ -3,19 +3,13 @@ import { useAuth } from '../Context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
+import Header from './Header';
 
 function Dashboard() {
     const { currentUser, loading } = useAuth();
     const navigate = useNavigate();
 
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            navigate('/login');
-        } catch (error) {
-            console.error('Error signing out from Dashboard:', error);
-        }
-    };
+   
 
     if (loading) {
         return (
@@ -26,6 +20,8 @@ function Dashboard() {
     }
 
     return (
+        <>
+        <Header />
         <div className="flex flex-1 justify-center py-5">
             <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
                 {currentUser ? (
@@ -40,12 +36,7 @@ function Dashboard() {
                             <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#0c7ff2] text-white text-base font-bold leading-normal tracking-[0.015em]">
                                 <span className="truncate">Start a New Trip</span>
                             </button>
-                            <button
-                                onClick={handleLogout}
-                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#f0f2f5] text-[#111418] text-base font-bold leading-normal tracking-[0.015em]"
-                            >
-                                <span className="truncate">Logout</span>
-                            </button>
+                           
                         </div>
                     </>
                 ) : (
@@ -68,6 +59,7 @@ function Dashboard() {
                 )}
             </div>
         </div>
+        </>
     );
 }
 
