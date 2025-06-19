@@ -53,6 +53,7 @@ function CreateTrip(){
 
         setSubmitLoading(false);
         alert("Trip created successfully!");
+        navigate('/homepage');
 
         setTripData({
             title: '',
