@@ -77,6 +77,20 @@ function HomePage() {
         <>
             <Header />
             <div className="container mx-auto p-4 bg-gray-50">
+                <div className="container mx-auto px-4 mt-6 mb-10">
+                    <div className="relative max-w-2xl mx-auto">
+                   <input
+                      type="text"
+                      placeholder="Where to?"
+                      className="w-full pl-12 pr-4 py-3 rounded-full bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg text-gray-700 placeholder-gray-400"
+                  />
+                  <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+               </div>
+  
+             </div>
+
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">Upcoming trips</h2>
                 {loadingTrips && <p className="text-center text-gray-600">Loading trips...</p>}
                 {error && <p className="text-center text-red-500">{error}</p>}
