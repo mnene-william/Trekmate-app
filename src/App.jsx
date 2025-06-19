@@ -9,6 +9,7 @@ import Header from './Components/Header';
 import PrivateRoute from './Components/PrivateRoute';
 import HomePage from './Components/HomePage';
 import CreateTrip from './Components/CreateTrip';
+import Profile from './Components/Profile';
 
 
 
@@ -31,7 +32,7 @@ function App() {
         <Route path="/explore" element={<h1>Explore Page (Coming Soon!)</h1>} />
         <Route path="/my-trips" element={<h1>My Trips Page (Coming Soon!)</h1>} />
         <Route path="/inbox" element={<h1>Inbox Page (Coming Soon!)</h1>} />
-        <Route path="/profile" element ={<PrivateRoute><h1>User Profile Page (Coming Soon!)</h1></PrivateRoute>} />
+        <Route path="/profile" element ={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/create-trip" element={<PrivateRoute><CreateTrip /></PrivateRoute>} />
                 
 

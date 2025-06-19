@@ -47,7 +47,7 @@ function CreateTrip(){
         await addDoc(collection(db, 'trips'), {
             ...tripData,
             creatorId: currentUser.uid,
-            creatorName: currentUser.displayName,
+            creatorName: currentUser.displayName || currentUser.email.split("@")[0],
             createdAt: Timestamp.now()
         });
 
@@ -61,10 +61,10 @@ function CreateTrip(){
             startDate: '',
             endDate: ''
         });
-        navigate('/homepage');
+        ;
         }
         catch(error){
-            console.error("Error creating trip:");
+            console.error("Error creating trip:",);
             setError('Failed to create trip');
             setSubmitLoading(false);
         }
