@@ -10,6 +10,7 @@ import PrivateRoute from './Components/PrivateRoute';
 import HomePage from './Components/HomePage';
 import CreateTrip from './Components/CreateTrip';
 import Profile from './Components/Profile';
+import TripDetails from './Components/TripDetails';
 
 
 
@@ -34,6 +35,7 @@ function App() {
         <Route path="/inbox" element={<h1>Inbox Page (Coming Soon!)</h1>} />
         <Route path="/profile" element ={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/create-trip" element={<PrivateRoute><CreateTrip /></PrivateRoute>} />
+        <Route path="/trips/:tripId" element={<TripDetails />} />
                 
 
       </Routes>

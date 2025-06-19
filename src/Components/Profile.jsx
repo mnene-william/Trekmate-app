@@ -3,9 +3,12 @@ import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import Header from './Header';
+import {useNavigate} from 'react-router-dom';
 
 function ProfilePage() {
     const { currentUser, loading } = useAuth();
+    const navigate = useNavigate();
+
 
     const [profileData, setProfileData] = useState(null);
     const [loadingProfile, setLoadingProfile] = useState(true);
@@ -166,14 +169,14 @@ function ProfilePage() {
                         <p style={{ textAlign: 'center', color: '#4a5568' }}>You haven't created any trips yet.</p>
                     )}
                     {userTrips.map(trip => (
-                        <div key={trip.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px',padding: '15px', display: 'flex', flexDirection: 'row', backgroundColor: '#f8f8f8' , boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)', transition: 'transform 0.2s ease-in-out' }}>
+                        <div key={trip.id} style={{ border: '1px solid #e2e8f0', borderRadius: '8px',padding: '15px', display: 'flex', flexDirection: 'row', backgroundColor: '#f8f8f8' , boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)', transition: 'transform 0.2s ease-in-out' }} onClick={() => navigate(`/trips/${trip.id}`)}>
                             <img 
                             src={trip.imageUrl} alt={trip.title} style={{width: '200px', height: '150px', objectFit: 'cover', borderRadius: '8px', marginRight: '15px'}} />
                             <div style={{flexGrow: 1}}>
-                                <h3 style={{fontSize: '16px',fontWeight: 'bold', marginBottom: '10px'}}>{trip.title}</h3> 
-                                <p style={{fontSize: '16px', color: '#718096', marginBottom: '10px'}}>{trip.destination}</p>
-                                <p style={{fontSize: '10px', color: '#555'}}> From {trip.startDate} to {trip.endDate}</p>
-                                <p style={{fontSize: '15px', color: '#555', lineHeight: '1.5'}}>{trip.description}</p>
+                                <h3 style={{fontSize: '18px',fontWeight: 'bold', marginBottom: '10px'}}>{trip.title}</h3> 
+                                <p style={{fontSize: '14px', color: '#718096', marginBottom: '10px'}}>{trip.destination}</p>
+                                <p style={{fontSize: '13px', color: '#555'}}> From {trip.startDate} to {trip.endDate}</p>
+                                <p style={{fontSize: '14px', color: '#555', lineHeight: '1.5'}}>{trip.description}</p>
                             </div>
                         </div>
                     ))}
