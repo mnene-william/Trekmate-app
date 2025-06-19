@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import Header from './Header';
 
-function Dashboard() {
+function HomePage() {
     const { currentUser } = useAuth();
     const [trips, setTrips] = useState([]);
     const [loadingTrips, setLoadingTrips] = useState(true);
@@ -103,11 +103,21 @@ function Dashboard() {
                     ))}
                 </div>
                 <h2 className="text-3xl font-bold text-gray-800 mt-10 mb-6">Find a travel buddy</h2>
-                <p className="text-gray-600">Travel buddy section coming soon...</p>
-                
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+                    {buddies.map(buddy => (
+                        <div key={buddy.id} className="flex flex-col items-center text-center p-4 bg-white rounded-lg shadow-sm">
+                            <img
+                                src={buddy.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${buddy.displayName ||  buddy.uid}&radius=50&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`}
+                                alt={buddy.displayName || 'Travel Buddy'}
+                                className="w-24 h-24 rounded-full object-cover mb-3 ring-2 ring-blue-500 ring-offset-2"
+                            />
+                            <h3 className="text-lg font-semibold text-gray-900">{buddy.displayName || 'Unknown User'}</h3>
+                        </div>
+                    ))}
+                </div>
             </div>
         </>
     );
 }
 
-export default Dashboard;
+export default HomePage;
