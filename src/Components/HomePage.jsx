@@ -76,7 +76,7 @@ function HomePage() {
     return (
         <>
             <Header />
-            <div className="container mx-auto p-4">
+            <div className="container mx-auto p-4 bg-gray-50">
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">Upcoming trips</h2>
                 {loadingTrips && <p className="text-center text-gray-600">Loading trips...</p>}
                 {error && <p className="text-center text-red-500">{error}</p>}
