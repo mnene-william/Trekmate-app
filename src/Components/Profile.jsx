@@ -5,7 +5,7 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebas
 import Header from './Header';
 import {useNavigate} from 'react-router-dom';
 
-function ProfilePage() {
+function Profile() {
     const { currentUser, loading } = useAuth();
     const navigate = useNavigate();
 
@@ -139,11 +139,11 @@ function ProfilePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '32px', paddingBottom: '40px', paddingLeft: '16px', paddingRight: '16px', background: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', margin: 'auto', marginBottom: '32px' }}>
                     <img
                         src={profileData?.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${profileData?.displayName || profileData?.uid}&radius=50&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`}
-                        alt={profileData?.username || 'profileData?.displayName' || 'Traveler'}
+                        alt={profileData?.username || profileData?.email || "User"}
                         style={{ width: '144px', height: '144px', borderRadius: '50%', objectFit: 'cover', marginBottom: '16px', border: '4px solid #bfdbfe', outline: '4px solid white' }}
                     />
                     <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: '#1a202c', marginBottom: '8px' }}>
-                        {profileData?.displayName || 'Traveler'}
+                        {profileData?.username || profileData?.dispalyName || 'Traveler'}
                     </h1>
                     <div style={{ display: 'flex', alignItems: 'center', color: '#4a5568', fontSize: '14px', marginBottom: '16px', gap: '8px' }}>
                         <span>Joined in {joinedYear}</span>
@@ -186,4 +186,4 @@ function ProfilePage() {
     );
 }
 
-export default ProfilePage;
+export default Profile;
