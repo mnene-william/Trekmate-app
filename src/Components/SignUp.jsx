@@ -47,7 +47,7 @@ function SignUp() {
            }
 
            setMessage('Account created successfully! Redirecting...');
-           navigate('/'); 
+           navigate('/create-profile'); 
        } catch (err) {
            console.error("Error signing up:", err); 
            if (err.code === 'auth/email-already-in-use') {
