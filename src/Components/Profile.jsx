@@ -139,7 +139,7 @@ function ProfilePage() {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '32px', paddingBottom: '40px', paddingLeft: '16px', paddingRight: '16px', background: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', margin: 'auto', marginBottom: '32px' }}>
                     <img
                         src={profileData?.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${profileData?.displayName || profileData?.uid}&radius=50&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`}
-                        alt={profileData?.displayName || 'User'}
+                        alt={profileData?.username || 'profileData?.displayName' || 'Traveler'}
                         style={{ width: '144px', height: '144px', borderRadius: '50%', objectFit: 'cover', marginBottom: '16px', border: '4px solid #bfdbfe', outline: '4px solid white' }}
                     />
                     <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: '#1a202c', marginBottom: '8px' }}>
@@ -152,14 +152,14 @@ function ProfilePage() {
                         <span style={{ height: '16px', width: '1px', background: '#cbd5e0', margin: '0 8px' }}></span>
                         <span>0+ reviews</span>
                     </div>
-                    <button style={{ background: '#3182ce', color: 'white', fontWeight: 'bold', padding: '8px 24px', borderRadius: '9999px', transition: 'background-color 0.15s ease-in-out', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                    <button style={{ background: '#3182ce', color: 'white', fontWeight: 'bold', padding: '8px 24px', borderRadius: '9999px', transition: 'background-color 0.15s ease-in-out', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} onClick={() => navigate('/create-profile')}>
                         Edit profile
                     </button>
                 </div>
                 <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', margin: 'auto', marginBottom: '32px' }}>
                     <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a202c', marginBottom: '16px' }}>About</h2>
                     <p style={{ color: '#4a5568', lineHeight: '1.6' }}>
-                        I'm a passionate traveler from San Francisco, always seeking new adventures and connections. I love exploring different cultures, trying new foods, and meeting people from all walks of life. My favorite travel experiences include hiking in the Swiss Alps, exploring the ancient ruins of Rome, and relaxing on the beaches of Bali. I'm excited to connect with fellow travelers and share stories and tips!
+                        {profileData?.bio || "No bio yet. Click 'Edit profile' to add one"}
                     </p>
                 </div>
                 <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', margin: 'auto', marginBottom: '32px' }}>

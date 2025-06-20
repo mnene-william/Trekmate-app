@@ -13,8 +13,6 @@ function CreateProfile() {
 
     const [username, setUsername] = useState('');
     const [bio, setBio] = useState('');
-    // profileImageUrl will hold the URL of the profile picture,
-    // either fetched from Firestore or from a new Cloudinary upload.
     const [profileImageUrl, setProfileImageUrl] = useState('');
 
     const [error, setError] = useState('');
@@ -24,38 +22,40 @@ function CreateProfile() {
     // useEffect to fetch and pre-fill existing profile data
     useEffect(() => {
         const fetchUserProfile = async () => {
-            if (currentUser) {
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                const docSnap = await getDoc(userDocRef);
-
-                if (docSnap.exists()) {
-                    // Profile exists, pre-fill form for editing
-                    const userData = docSnap.data();
-                    setUsername(userData.username || '');
-                    setBio(userData.bio || '');
-                    setProfileImageUrl(userData.photoURL || ''); // Set the URL from Firestore
-                    setIsEditingExistingProfile(true);
-
-                   
-                } else {
-                    // Profile does not exist yet for this logged-in user, allow creation
-                    setIsEditingExistingProfile(false);
-                    setUsername('');
-                    setBio('');
-                    setProfileImageUrl(''); // Ensure image URL is cleared for new profile
-                }
-            } else {
-                // No current user, clear form and ensure no editing state
+            if (!currentUser) {
+                // If no current user, clear form and ensure no editing state
+                setIsEditingExistingProfile(false);
                 setUsername('');
                 setBio('');
                 setProfileImageUrl('');
-                setIsEditingExistingProfile(false);
                 // The main return block below handles redirection for non-logged-in users.
+                return;
+            }
+
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const docSnap = await getDoc(userDocRef);
+
+            if (docSnap.exists()) {
+                console.log("Firestore doc data:", docSnap.data());
+                const data = docSnap.data(); // Get the data from the document snapshot
+
+                // Pre-fill the individual state variables with existing data
+                setUsername(data.username || currentUser.displayName || currentUser.email.split('@')[0]);
+                setBio(data.bio || ''); // Use existing bio, or empty string if null/undefined
+                setProfileImageUrl(data.photoURL || currentUser.photoURL || ''); // Use existing photoURL, fallback to Auth photoURL
+                setIsEditingExistingProfile(true); // User document exists, so we are editing
+            } else {
+                console.log("Firestore doc does NOT exist for this user.");
+                // Initialize with values from Firebase Auth if no Firestore document exists yet
+                setUsername(currentUser.displayName || currentUser.email.split('@')[0]);
+                setBio(''); // Start with empty bio
+                setProfileImageUrl(currentUser.photoURL || ''); // Use Auth photoURL as initial image
+                setIsEditingExistingProfile(false); // No user document, so we are creating
             }
         };
 
         fetchUserProfile();
-    }, [currentUser]);
+    }, [currentUser]); // Re-run effect when currentUser changes
 
     // Cloudinary Upload Widget Handler
     const handleImageUpload = () => {
@@ -66,21 +66,21 @@ function CreateProfile() {
 
         const widget = window.cloudinary.createUploadWidget(
             {
-                cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,// Correct ENV variable access
-                uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET, // Correct ENV variable access
+                cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
+                uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
                 sources: ['local', 'url', 'camera'],
-                folder: 'trekmate_profile_pictures', // A specific folder for profiles
+                folder: 'trekmate_profile_pictures',
                 clientAllowedFormats: ["png", "gif", "jpeg", "jpg"],
                 maxImageFileSize: 5000000, // Max 5MB
             },
             (error, result) => {
                 if (!error && result && result.event === 'success') {
                     console.log('Done uploading Cloudinary image:', result.info);
-                    setProfileImageUrl(result.info.secure_url); // Store the secure URL
-                    setError(''); // Clear any previous error
+                    setProfileImageUrl(result.info.secure_url);
+                    setError('');
                 } else if (error) {
                     console.error('Cloudinary upload error:', error);
-                    setError("Image upload failed: " + error.message); // Correct error message formatting
+                    setError("Image upload failed: " + error.message);
                 }
             }
         );
@@ -106,36 +106,34 @@ function CreateProfile() {
         try {
             // Update Firebase Auth profile
             await updateProfile(currentUser, {
-                displayName: username.trim(), // Ensure displayName is trimmed
-                photoURL: profileImageUrl, // Use the Cloudinary URL
+                displayName: username.trim(),
+                photoURL: profileImageUrl,
             });
             console.log('Firebase Auth profile updated (displayName, photoURL)');
 
             const userDocRef = doc(db, "users", currentUser.uid);
 
-            let createdAt = new Date(); // Default for new profile
+            let createdAt = new Date();
             if (isEditingExistingProfile) {
-                // If editing, try to preserve the original createdAt timestamp
                 const existingDoc = await getDoc(userDocRef);
                 if (existingDoc.exists()) {
-                    // Firebase Timestamps are objects, convert to Date if needed, or store as is
                     createdAt = existingDoc.data().createdAt;
                 }
             }
 
             await setDoc(userDocRef, {
-                username: username.trim(), // Store trimmed username
+                username: username.trim(),
                 email: currentUser.email,
                 bio: bio.trim(),
-                photoURL: profileImageUrl, // Store the Cloudinary URL
+                photoURL: profileImageUrl,
                 createdAt: createdAt,
                 lastUpdated: new Date(),
-            }, { merge: true }); // Use merge: true to update existing fields without overwriting others
+            }, { merge: true });
 
             console.log('User profile data saved/updated');
             console.log('Profile created/updated successfully');
 
-            navigate('/profile'); // Redirect to profile page after saving
+            navigate('/profile');
         } catch (err) {
             console.error("An error occurred while creating/updating your profile:", err);
             setError("Failed to create/update profile: " + err.message);
@@ -144,7 +142,6 @@ function CreateProfile() {
         }
     };
 
-    // Conditional rendering if no current user (from your original code, correctly placed)
     if (!currentUser) {
         return (
             <div className="flex flex-1 justify-center items-center py-5" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
@@ -180,7 +177,7 @@ function CreateProfile() {
                     </header>
 
                     <div className="px-40 flex flex-1 justify-center py-5">
-                        <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w\-[960px] flex-1">
+                        <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-\[960px] flex-1">
                             <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">
                                 {isEditingExistingProfile ? 'Edit your profile' : 'Create your profile'}
                             </h2>
@@ -228,8 +225,8 @@ function CreateProfile() {
                                         <p className="text-[#111418] text-sm font-normal leading-normal max-w-[480px] text-center">Recommended size: 1000x1000px</p>
                                     </div>
                                     <button
-                                        type="button" // Critical: Prevents button from submitting the form
-                                        onClick={handleImageUpload} // Call the Cloudinary widget handler
+                                        type="button"
+                                        onClick={handleImageUpload}
                                         className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f0f2f5] text-[#111418] text-sm font-bold leading-normal tracking-[0.015em]"
                                     >
                                         <span className="truncate">{profileImageUrl ? 'Change Image' : 'Upload Image'}</span>
@@ -243,4 +240,5 @@ function CreateProfile() {
         </>
     );
 }
+
 export default CreateProfile;

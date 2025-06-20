@@ -3,6 +3,7 @@ import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import Header from './Header';
+import { Link } from 'react-router-dom';
 
 function HomePage() {
     const { currentUser } = useAuth();
@@ -99,6 +100,7 @@ function HomePage() {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {trips.map(trip => (
+                        <Link to={`/trips/${trip.id}`} key={trip.id} className="trip-card-link">
                         <div key={trip.id} className="bg-white rounded-lg shadow-md overflow-hidden">
                             <img
                                 src={trip.imageUrl || "https://via.placeholder.com/400x250?text=No+Image"}
@@ -114,6 +116,7 @@ function HomePage() {
                                 </p>
                             </div>
                         </div>
+                        </Link>
                     ))}
                 </div>
                 <h2 className="text-3xl font-bold text-gray-800 mt-10 mb-6">Find a travel buddy</h2>
@@ -125,7 +128,7 @@ function HomePage() {
                                 alt={buddy.displayName || 'Travel Buddy'}
                                 className="w-24 h-24 rounded-full object-cover mb-3 ring-2 ring-blue-500 ring-offset-2"
                             />
-                            <h3 className="text-lg font-semibold text-gray-900">{buddy.displayName || 'Unknown User'}</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{buddy.displayName || buddy.email.split('@')[0]}</h3>
                         </div>
                     ))}
                 </div>
