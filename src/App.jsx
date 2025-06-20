@@ -11,6 +11,7 @@ import HomePage from './Components/HomePage';
 import CreateTrip from './Components/CreateTrip';
 import Profile from './Components/Profile';
 import TripDetails from './Components/TripDetails';
+import MyTrips from './Components/MyTrips';
 
 
 
@@ -31,10 +32,11 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/" element={<Navigate to='homepage' replace />} />
         <Route path="/explore" element={<h1>Explore Page (Coming Soon!)</h1>} />
-        <Route path="/my-trips" element={<h1>My Trips Page (Coming Soon!)</h1>} />
+        <Route path="/my-trips" element={<PrivateRoute><MyTrips /></PrivateRoute>} />
         <Route path="/inbox" element={<h1>Inbox Page (Coming Soon!)</h1>} />
         <Route path="/profile" element ={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/create-trip" element={<PrivateRoute><CreateTrip /></PrivateRoute>} />
+        
         <Route path="/trips/:tripId" element={<TripDetails />} />
                 
 

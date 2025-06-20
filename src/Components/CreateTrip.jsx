@@ -105,7 +105,9 @@ function CreateTrip() {
                 ...tripData,
                 creatorId: currentUser.uid,
                 creatorName: currentUser.displayName || currentUser.email.split("@")[0],
-                createdAt: Timestamp.now()
+                createdAt: Timestamp.now(),
+                participants: [],
+                activities: [],
             });
 
             setSubmitLoading(false);
