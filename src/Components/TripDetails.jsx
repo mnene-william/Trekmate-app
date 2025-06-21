@@ -269,7 +269,9 @@ function TripDetails() {
                     {trip.participants && trip.participants.length > 0 ? (
                         <ul className="list-disc list-inside text-gray-700 text-lg space-y-2"> {/* Added space-y */}
                             {trip.participants.map((participantId, index) => (
-                                <li key={index}>{participantUsernames[participantId] || participantId}</li>
+                                <li key={index}>
+                                    <span onClick={() => navigate(`/users/${participantId}`)} className= "cursor-pointer text-blue-600 underline">{participantUsernames[participantId] || participantId}</span>
+                                </li>
                                 
                             ))}
                         </ul>

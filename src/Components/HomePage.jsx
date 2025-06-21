@@ -3,10 +3,12 @@ import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
 import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
 import Header from './Header';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function HomePage() {
     const { currentUser } = useAuth();
+    const navigate = useNavigate();
+
     const [trips, setTrips] = useState([]);
     const [loadingTrips, setLoadingTrips] = useState(true);
     const [error, setError] = useState('');
@@ -122,7 +124,7 @@ function HomePage() {
                 <h2 className="text-3xl font-bold text-gray-800 mt-10 mb-6">Find a travel buddy</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                     {buddies.map(buddy => (
-                        <div key={buddy.id} className="flex flex-col items-center text-center p-4 bg-white rounded-lg shadow-sm">
+                        <div key={buddy.id} onClick={() => navigate(`/users/${buddy.id}`)} className="flex flex-col items-center text-center p-4 bg-white rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow duration-200">
                             <img
                                 src={buddy.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${buddy.displayName ||  buddy.uid}&radius=50&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`}
                                 alt={buddy.displayName || 'Travel Buddy'}

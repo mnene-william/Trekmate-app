@@ -12,6 +12,7 @@ import CreateTrip from './Components/CreateTrip';
 import Profile from './Components/Profile';
 import TripDetails from './Components/TripDetails';
 import MyTrips from './Components/MyTrips';
+import UserProfile from './Components/UserProfile';
 
 
 
@@ -38,13 +39,15 @@ function App() {
         <Route path="/create-trip" element={<PrivateRoute><CreateTrip /></PrivateRoute>} />
         
         <Route path="/trips/:tripId" element={<TripDetails />} />
+        <Route path="/users/:userId" element={<UserProfile />} />
                 
 
       </Routes>
 
       
     </>
-  )
+  );
+  
 }
 
 export default App;
