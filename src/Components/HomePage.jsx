@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
-import { collection, query, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import Header from './Header';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -18,32 +18,36 @@ function HomePage() {
     const [loadingBuddies, setLoadingBuddies] = useState(true);
     const [errorBuddies, setErrorBuddies] = useState('');
 
-    useEffect(() => {
-        const fetchTrips = async () => {
-            try {
-                setLoadingTrips(true);
-                const tripsCollectionRef = collection(db, 'trips');
-                const q = query(tripsCollectionRef, orderBy('createdAt', 'desc'));
-                const querySnapshot = await getDocs(q);
+   useEffect(() => {
+    setLoadingTrips(true);
+    setError('');
 
-                const fetchedTrips = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
 
-                setTrips(fetchedTrips);
-                setError('');
-            } catch (err) {
-                console.error("Error fetching trips:", err);
-                setError("Failed to load trips.");
-            } finally {
-                setLoadingTrips(false);
-            }
-        };
+    const tripsCollectionRef = collection(db, 'trips');
+    const q =query(tripsCollectionRef, orderBy('createdAt', 'desc'));
 
-        fetchTrips();
-    }, []);
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const fetchedTrips = [];
+    querySnapshot.forEach(doc => {
+        fetchedTrips.push({
+            id: doc.id,
+            ...doc.data()
+        });
+    });
+    setTrips(fetchedTrips);
+    setLoadingTrips(false);
+    setError('');
+   }, (err) => {
+    console.error("Error fetching real-time trips:", err);
+    setError("Failed to load trips in real-time.");
+    setLoadingTrips(false);
+   });
+    return () => unsubscribe();
 
+
+   }, []);
+
+   
 
     useEffect(() => {
         const fetchBuddies = async () => {

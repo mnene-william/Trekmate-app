@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, getDoc, getDocs, updateDoc, arrayUnion, arrayRemove, collection, query, where } from 'firebase/firestore';
+import { doc, getDoc, getDocs, updateDoc, arrayUnion, arrayRemove, collection, query, where, deleteDoc } from 'firebase/firestore';
 import Header from './Header';
 import { useAuth } from '../Context/AuthContext';
 
@@ -87,6 +87,34 @@ function TripDetails() {
         };
         fetchTripDetails();
     }, [tripId, currentUser]);
+
+    const handleManageTrip = () => {
+        if(trip && trip.id){
+            navigate(`/create-trip/${trip.id}`);
+        }
+    };
+
+    const handleDeleteTrip = async () =>{
+        if(!currentUser){
+            setError("You must be logged in yo delete a trip");
+            return;
+        }
+        if(!isCreator){
+            setError("You are not authorized to delete this trip.");
+            return;
+        }
+        if(window.confirm("Are you sure you want to delete this trip? This action canoot be undone.")){
+            try{
+                await deleteDoc(doc(db, 'trips', tripId));
+                alert('Trip deleted successfullu!');
+                navigate('/homepage');
+            }
+            catch(err){
+                console.error("Error deleting trip:", err);
+                setError('Failed to delete trip:' + err.message);
+            }
+        }
+    }
 
     const handleJoinLeaveTrip = async () => {
         if(!currentUser){
@@ -193,59 +221,83 @@ function TripDetails() {
         );
     }
 
-    let buttonText = "Join Trip";
-    let buttonClass = "bg-blue-600 hover:bg-blue-700";
+    let primaryButtonOnClick = handleJoinLeaveTrip; // Default for non-creators
+    let primaryButtonText = "Join Trip";
+    let primaryButtonClass = "bg-blue-600 hover:bg-blue-700";
+    let primaryButtonDisabled = isJoining; // Disable during join/leave operation
+
     if (isCreator) {
-        buttonText = "Manage Trip";
-        buttonClass = "bg-blue-600 hover:bg-red-700";
+        primaryButtonText = "Edit Trip"; // Changed "Manage Trip" to "Edit Trip" for clarity on this button's direct action
+        primaryButtonClass = "bg-blue-600 hover:bg-blue-700"; // Keep blue for consistency
+        primaryButtonOnClick = handleManageTrip; // Assign the manage function
+        primaryButtonDisabled = false; // Creators can always click their edit button
+    } else if (isJoined) {
+        primaryButtonText = "Leave Trip";
+        primaryButtonClass = "bg-red-500 hover:bg-red-600";
+        primaryButtonDisabled = isJoining;
     }
-    else if(isJoined){
-        buttonText = "Leave Trip";
-        buttonClass = "bg-red-500 hover:bg-red-600";
-    }
+
 
     return (
         <>
             <Header />
-      <div className="container mx-auto p-8" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+            <div className="container mx-auto p-8" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
                 <div className="flex justify-between items-center mb-4">
                     <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
                         &larr; Back to Trips
                     </button>
                     {currentUser && (
-                        <button
-                            onClick={handleJoinLeaveTrip}
-                            disabled={isJoining || isCreator}
-                            className={`px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 ${buttonClass} ${isJoining ? 'opacity-75 cursor-not-allowed' : ''}`}
-                        >
-                            {isJoining ? (isJoined ? 'Leaving...' : 'Joining...') : buttonText}
-                        </button>
+                        <div className="flex space-x-4"> {/* Use flex and space-x for multiple buttons */}
+                            {isCreator ? (
+                                // Buttons for the Creator
+                                <>
+                                    <button
+                                        onClick={handleManageTrip}
+                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75"
+                                    >
+                                        Edit Trip
+                                    </button>
+                                    <button
+                                        onClick={handleDeleteTrip}
+                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75"
+                                    >
+                                        Delete Trip
+                                    </button>
+                                </>
+                            ) : (
+                                // Button for Participants (Join/Leave)
+                                <button
+                                    onClick={primaryButtonOnClick}
+                                    disabled={primaryButtonDisabled}
+                                    className={`px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 ${primaryButtonClass} ${primaryButtonDisabled ? 'opacity-75 cursor-not-allowed' : ''}`}
+                                >
+                                    {primaryButtonText}
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
 
                 <h1 className="text-4xl font-bold mb-4 text-[#111418]">{trip.title}</h1>
 
-                {/* --- IMAGE DISPLAY FIXES START HERE --- */}
                 {trip.imageUrl && (
-                    <div className="relative w-full h-96 mb-6 rounded-lg overflow-hidden shadow-lg"> {/* Added responsive container */}
+                    <div className="relative w-full h-96 mb-6 rounded-lg overflow-hidden shadow-lg">
                         <img
                             src={trip.imageUrl}
                             alt={trip.title}
-                            className="w-full h-full object-cover object-center" // 'object-cover' crops, 'object-center' centers it
+                            className="w-full h-full object-cover object-center"
                         />
                     </div>
                 )}
-                {/* --- IMAGE DISPLAY FIXES END HERE --- */}
 
-                <p className="text-gray-700 text-lg mb-6 leading-relaxed">{trip.description}</p> {/* Added leading-relaxed for readability */}
+                <p className="text-gray-700 text-lg mb-6 leading-relaxed">{trip.description}</p>
 
-                {/* --- DETAILS LAYOUT IMPROVEMENTS START HERE --- */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6"> {/* Increased gap for more breathing room */}
-                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm"> {/* Added background and padding for detail cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
                         <h2 className="text-2xl font-semibold mb-2 text-[#111418]">Destination</h2>
                         <p className="text-gray-700 text-lg">{trip.destination}</p>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm"> {/* Added background and padding for detail cards */}
+                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
                         <h2 className="text-2xl font-semibold mb-2 text-[#111418]">Dates</h2>
                         <p className="text-gray-700 text-lg">
                             {trip.startDate} - {trip.endDate}
@@ -253,41 +305,40 @@ function TripDetails() {
                     </div>
                 </div>
 
-                <div className="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm"> {/* Grouping Activities, adding background/padding */}
-                    <h2 className="text-2xl font-semibold mb-4 text-[#111418]">Activities</h2> {/* Increased mb for better separation */}
+                <div className="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <h2 className="text-2xl font-semibold mb-4 text-[#111418]">Activities</h2>
                     {trip.activities && Array.isArray(trip.activities) && trip.activities.length > 0 ? (
-                        <ul className="list-disc list-inside text-gray-700 text-lg space-y-2"> {/* Added space-y for list items */}
+                        <ul className="list-disc list-inside text-gray-700 text-lg space-y-2">
                             {trip.activities.map((activity, index) => (
                                 <li key={index}>{activity}</li>
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-gray-600">No activities listed for this trip.</p> 
+                        <p className="text-gray-600">No activities listed for this trip.</p>
                     )}
                 </div>
 
-                <div className="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm"> {/* Grouping Participants, adding background/padding */}
-                    <h2 className="text-2xl font-semibold mb-4 text-[#111418]">Participants ({trip.participants ? trip.participants.length : 0})</h2> {/* Increased mb */}
+                <div className="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm">
+                    <h2 className="text-2xl font-semibold mb-4 text-[#111418]">Participants ({trip.participants ? trip.participants.length : 0})</h2>
                     {trip.participants && trip.participants.length > 0 ? (
-                        <ul className="list-disc list-inside text-gray-700 text-lg space-y-2"> {/* Added space-y */}
+                        <ul className="list-disc list-inside text-gray-700 text-lg space-y-2">
                             {trip.participants.map((participantId, index) => (
                                 <li key={index}>
-                                    <span onClick={() => navigate(`/users/${participantId}`)} className= "cursor-pointer text-blue-600 underline">{participantUsernames[participantId] || participantId}</span>
+                                    <span onClick={() => navigate(`/users/${participantId}`)} className="cursor-pointer text-blue-600 underline">
+                                        {participantUsernames[participantId] || participantId}
+                                    </span>
                                 </li>
-                                
                             ))}
                         </ul>
                     ) : (
                         <p className="text-gray-600">Be the first to join this trip!</p>
                     )}
                 </div>
-                {/* --- DETAILS LAYOUT IMPROVEMENTS END HERE --- */}
 
                 {trip.creatorName && (
-                    <p className="text-gray-500 text-sm mt-8 text-right">Created by: {trip.creatorName}</p> 
+                    <p className="text-gray-500 text-sm mt-8 text-right">Created by: {trip.creatorName}</p>
                 )}
             </div>
-            
         </>
     );
 }

@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react'; // ADDED useRef
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
-import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { useNavigate, useParams } from 'react-router-dom';
+import { collection, addDoc, Timestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
 import Header from './Header';
 
 function CreateTrip() {
     const { currentUser, loading } = useAuth();
+    const { tripId } = useParams();
     const navigate = useNavigate();
 
     const [tripData, setTripData] = useState({
@@ -21,6 +22,8 @@ function CreateTrip() {
 
     const [submitLoading, setSubmitLoading] = useState(false);
     const [error, setError] = useState('');
+    const [pageLoading, setPageLoading] = useState(true);
+    const [initialFetchError, setInitialFetchError] = useState('');
 
     // State and Ref for Cloudinary Image Upload
     const [imageUploadLoading, setImageUploadLoading] = useState(false);
@@ -71,6 +74,45 @@ function CreateTrip() {
         }
     };
 
+    useEffect(() => {
+        const fetchTrip = async () => {
+            if (tripId) {
+                try {
+                    const tripRef = doc(db, 'trips', tripId);
+                    const tripSnap = await getDoc(tripRef);
+
+                    if (tripSnap.exists()) {
+                        const data = tripSnap.data();
+
+                        // Ensure activities is an array before joining, or an empty string if not present
+                        const activitiesString = Array.isArray(data.activities) ? data.activities.join('\n') : data.activities || '';
+
+                        setTripData({
+                            title: data.title || '',
+                            destination: data.destination || '',
+                            description: data.description || '',
+                            startDate: data.startDate || '',
+                            endDate: data.endDate || '',
+                            activities: activitiesString,
+                            imageUrl: data.imageUrl || '',
+                        });
+                        setPageLoading(false);
+                    } else {
+                        setInitialFetchError("Trip not found."); // Set error if trip ID exists but doc doesn't
+                        setPageLoading(false);
+                    }
+                } catch (err) {
+                    console.error("Error fetching trip for edit:", err);
+                    setInitialFetchError("Failed to load trip data.");
+                    setPageLoading(false);
+                }
+            } else {
+                setPageLoading(false);
+            }
+        }
+        fetchTrip();
+    }, [tripId]);
+
     const handleChange = (e) => {
         const { id, value } = e.target;
         setTripData(prevData => ({ ...prevData, [id]: value }));
@@ -82,7 +124,7 @@ function CreateTrip() {
         setSubmitLoading(true);
 
         if (!currentUser) {
-            setError('You must log in to create a trip.');
+            setError('You must log in to create/edit a trip.');
             setSubmitLoading(false);
             return;
         }
@@ -101,37 +143,53 @@ function CreateTrip() {
         }
 
         try {
-            // tripData now includes imageUrl if uploaded
+            // Correctly split activities by newline and filter empty strings
+            const activitiesArray = tripData.activities.split('\n').map(activity => activity.trim()).filter(activity => activity !== '');
+            console.log("Activities Array to be saved:", activitiesArray);
 
-            const activitiesArray = tripData.activities.split('/n').map(activity => activity.trim()).filter(activity => activity !== '');
-            console.log("Activities Array to be saved:", activitiesArray); // Add this line
-            await addDoc(collection(db, 'trips'), {
-                ...tripData,
+            const tripFieldsToSave = {
+                title: tripData.title,
+                destination: tripData.destination,
+                description: tripData.description,
+                startDate: tripData.startDate,
+                endDate: tripData.endDate,
                 activities: activitiesArray,
+                imageUrl: tripData.imageUrl,
                 creatorId: currentUser.uid,
                 creatorName: currentUser.displayName || currentUser.email.split("@")[0],
-                createdAt: Timestamp.now(),
-                participants: [],
-                
-            });
+            };
+
+            if (tripId) {
+                // Update existing trip
+                await updateDoc(doc(db, 'trips', tripId), tripFieldsToSave);
+                alert("Trip updated successfully!");
+            } else {
+                // Create new trip
+                await addDoc(collection(db, 'trips'), {
+                    ...tripFieldsToSave,
+                    createdAt: Timestamp.now(),
+                    participants: [], // Only set participants for new trips
+                });
+                alert("Trip created successfully!");
+
+                // Reset form fields and image URL only for new trip creation
+                setTripData({
+                    title: '',
+                    destination: '',
+                    description: '',
+                    startDate: '',
+                    endDate: '',
+                    activities: '',
+                    imageUrl: ''
+                });
+            }
 
             setSubmitLoading(false);
-            alert("Trip created successfully!");
-            navigate('/homepage'); // Redirect to homepage after successful creation
+            navigate('/homepage'); // Redirect to homepage after successful operation
 
-            // Reset form fields and image URL
-            setTripData({
-                title: '',
-                destination: '',
-                description: '',
-                startDate: '',
-                endDate: '',
-                activities: '',
-                imageUrl: ''
-            });
         } catch (error) {
-            console.error("Error creating trip:", error);
-            setError('Failed to create trip: ' + error.message);
+            console.error("Error creating/updating trip:", error);
+            setError('Failed to process trip: ' + error.message);
             setSubmitLoading(false);
         }
     };
@@ -144,12 +202,24 @@ function CreateTrip() {
     }, [currentUser, loading, navigate]);
 
     // Render loading state if auth is still loading
-    if (loading) {
+    if (loading || pageLoading) {
         return (
             <>
                 <Header />
                 <div style={styles.container}>
-                    <p style={styles.loadingText}>Loading authentication...</p>
+                    <p style={styles.loadingText}>Loading trip data...</p>
+                </div>
+            </>
+        );
+    }
+
+    if (initialFetchError) {
+        return (
+            <>
+                <Header />
+                <div style={styles.container}>
+                    <p style={styles.errorMessage}>{initialFetchError}</p>
+                    <button onClick={() => navigate('/homepage')} style={styles.submitButton}>Back to Home</button>
                 </div>
             </>
         );
@@ -159,7 +229,8 @@ function CreateTrip() {
         <>
             <Header />
             <div style={styles.container}>
-                <h2 style={styles.heading}>Create a New Trip</h2>
+                {/* NEW: Dynamic Heading */}
+                <h2 style={styles.heading}>{tripId ? 'Edit Trip' : 'Create a New Trip'}</h2>
                 <form onSubmit={handleSubmit} style={styles.form}>
                     {error && <p style={styles.errorMessage}>{error}</p>}
 
@@ -223,24 +294,21 @@ function CreateTrip() {
                     </div>
 
                     <div style={styles.formGroup}>
-                        <label htmlFor="activities" style={styles.label}>Activities (comma-separated):</label>
+                        <label htmlFor="activities" style={styles.label}>Activities (each on a new line):</label> {/* UPDATED LABEL HINT */}
                         <textarea
                             id="activities"
                             rows="5"
                             value={tripData.activities}
                             onChange={handleChange}
-                            style={styles.textarea} // Re-using existing input style
-                            placeholder="e.g., Hiking, Swimming, Sightseeing"
-                         />
+                            style={styles.textarea}
+                            placeholder="e.g.,&#10;Hiking&#10;Swimming&#10;Sightseeing" // Placeholder with newlines
+                        />
                     </div>
 
-
-
-                    {/* NEW: Cloudinary Image Upload Section */}
                     <div style={styles.formGroup}>
                         <label style={styles.label}>Trip Image (Optional):</label>
                         <button
-                            type="button" // Use type="button" to prevent form submission when clicked
+                            type="button"
                             onClick={openCloudinaryWidget}
                             style={{
                                 ...styles.uploadButton,
@@ -251,7 +319,7 @@ function CreateTrip() {
                             {imageUploadLoading ? 'Uploading Image...' : 'Choose Image'}
                         </button>
                         {imageUploadError && <p style={styles.errorMessage}>{imageUploadError}</p>}
-                        {tripData.imageUrl && ( // Show preview if image is uploaded
+                        {tripData.imageUrl && (
                             <div style={{ marginTop: '15px', textAlign: 'center' }}>
                                 <p style={{ marginBottom: '5px', color: '#4a5568', fontSize: '14px' }}>Image Preview:</p>
                                 <img
@@ -271,13 +339,13 @@ function CreateTrip() {
 
                     <button
                         type="submit"
-                        disabled={submitLoading || imageUploadLoading} // Disable if image is still uploading
+                        disabled={submitLoading || imageUploadLoading}
                         style={{
                             ...styles.submitButton,
                             ...(submitLoading || imageUploadLoading ? styles.submitButtonDisabled : {}),
                         }}
                     >
-                        {submitLoading ? 'Creating Trip...' : 'Create Trip'}
+                        {submitLoading ? (tripId ? 'Saving Changes...' : 'Creating Trip...') : (tripId ? 'Save Changes' : 'Create Trip')} {/* DYNAMIC BUTTON TEXT */}
                     </button>
                 </form>
             </div>
@@ -345,7 +413,7 @@ const styles = {
         cursor: 'pointer',
         marginTop: '24px',
         transition: 'background-color 0.2s ease-in-out',
-        width: '100%', // Make button full width
+        width: '100%',
     },
     submitButtonDisabled: {
         backgroundColor: '#a0aec0',
@@ -366,9 +434,8 @@ const styles = {
         color: '#4a5568',
         marginTop: '32px',
     },
-    // NEW: Style for the Cloudinary upload button
     uploadButton: {
-        backgroundColor: '#4a90e2', // A nice blue
+        backgroundColor: '#4a90e2',
         color: 'white',
         fontWeight: 'bold',
         padding: '10px 15px',
@@ -377,12 +444,12 @@ const styles = {
         cursor: 'pointer',
         fontSize: '16px',
         transition: 'background-color 0.2s ease-in-out',
-        width: '100%', // Make button full width
+        width: '100%',
     },
     uploadButtonDisabled: {
         backgroundColor: '#a0aec0',
         cursor: 'not-allowed',
-    },
+    }
 };
 
 export default CreateTrip;

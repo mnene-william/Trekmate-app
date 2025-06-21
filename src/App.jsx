@@ -36,7 +36,7 @@ function App() {
         <Route path="/my-trips" element={<PrivateRoute><MyTrips /></PrivateRoute>} />
         <Route path="/inbox" element={<h1>Inbox Page (Coming Soon!)</h1>} />
         <Route path="/profile" element ={<PrivateRoute><Profile /></PrivateRoute>} />
-        <Route path="/create-trip" element={<PrivateRoute><CreateTrip /></PrivateRoute>} />
+        <Route path="/create-trip/:tripId" element={<PrivateRoute><CreateTrip /></PrivateRoute>} />
         
         <Route path="/trips/:tripId" element={<TripDetails />} />
         <Route path="/users/:userId" element={<UserProfile />} />
