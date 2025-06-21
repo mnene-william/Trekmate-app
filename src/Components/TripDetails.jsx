@@ -33,7 +33,9 @@ function TripDetails() {
 
                 if (tripDocSnap.exists()) {
                    const data = {id: tripDocSnap.id, ...tripDocSnap.data()};
+
                     setTrip(data);
+                    console.log("Current Trip Data (from Firestore):", data); // This log is crucial
 
 
 
@@ -253,7 +255,7 @@ function TripDetails() {
 
                 <div className="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm"> {/* Grouping Activities, adding background/padding */}
                     <h2 className="text-2xl font-semibold mb-4 text-[#111418]">Activities</h2> {/* Increased mb for better separation */}
-                    {trip.activities && trip.activities.length > 0 ? (
+                    {trip.activities && Array.isArray(trip.activities) && trip.activities.length > 0 ? (
                         <ul className="list-disc list-inside text-gray-700 text-lg space-y-2"> {/* Added space-y for list items */}
                             {trip.activities.map((activity, index) => (
                                 <li key={index}>{activity}</li>

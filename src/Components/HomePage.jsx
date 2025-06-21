@@ -131,6 +131,20 @@ function HomePage() {
                                 className="w-24 h-24 rounded-full object-cover mb-3 ring-2 ring-blue-500 ring-offset-2"
                             />
                             <h3 className="text-lg font-semibold text-gray-900">{buddy.displayName || buddy.email.split('@')[0]}</h3>
+                            <button onClick={() => navigate(`/users/${buddy.id}`)} className='mt-2                /* margin-top: 8px */
+                bg-blue-500         
+                text-white          
+                font-bold          
+                px-3 py-1.5         
+                rounded-full       
+                text-sm             
+                shadow-sm           
+                cursor-pointer    
+                transition-colors  
+                duration-150        
+                ease-in-out        
+                hover:bg-blue-600   
+                focus:outline-none '>View Profile</button>
                         </div>
                     ))}
                 </div>

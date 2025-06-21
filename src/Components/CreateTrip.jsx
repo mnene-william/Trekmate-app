@@ -14,6 +14,7 @@ function CreateTrip() {
         destination: '',
         description: '',
         startDate: '',
+        activities: '',
         endDate: '',
         imageUrl: '', // ADDED: To store the Cloudinary image URL
     });
@@ -101,13 +102,17 @@ function CreateTrip() {
 
         try {
             // tripData now includes imageUrl if uploaded
+
+            const activitiesArray = tripData.activities.split('/n').map(activity => activity.trim()).filter(activity => activity !== '');
+            console.log("Activities Array to be saved:", activitiesArray); // Add this line
             await addDoc(collection(db, 'trips'), {
                 ...tripData,
+                activities: activitiesArray,
                 creatorId: currentUser.uid,
                 creatorName: currentUser.displayName || currentUser.email.split("@")[0],
                 createdAt: Timestamp.now(),
                 participants: [],
-                activities: [],
+                
             });
 
             setSubmitLoading(false);
@@ -121,6 +126,7 @@ function CreateTrip() {
                 description: '',
                 startDate: '',
                 endDate: '',
+                activities: '',
                 imageUrl: ''
             });
         } catch (error) {
@@ -215,6 +221,20 @@ function CreateTrip() {
                             style={styles.input}
                         />
                     </div>
+
+                    <div style={styles.formGroup}>
+                        <label htmlFor="activities" style={styles.label}>Activities (comma-separated):</label>
+                        <textarea
+                            id="activities"
+                            rows="5"
+                            value={tripData.activities}
+                            onChange={handleChange}
+                            style={styles.textarea} // Re-using existing input style
+                            placeholder="e.g., Hiking, Swimming, Sightseeing"
+                         />
+                    </div>
+
+
 
                     {/* NEW: Cloudinary Image Upload Section */}
                     <div style={styles.formGroup}>
