@@ -42,7 +42,9 @@ function SignUp() {
                    uid: newUser.uid,
                    displayName: nameRef.current.value || newUser.email.split('@')[0], 
                    email: newUser.email,
-                   createdAt: serverTimestamp()
+                   createdAt: serverTimestamp(),
+                   followersCount: 0, // Initialize followers count to 0
+                   followingCount: 0
                });
            }
 

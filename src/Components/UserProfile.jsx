@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import { useAuth } from '../Context/AuthContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, getDoc, query, orderBy, where, getDocs, collection, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, query, orderBy, where, getDocs, collection, setDoc, deleteDoc, writeBatch, increment, updateDoc } from 'firebase/firestore';
 import Header from './Header';
 
 
@@ -24,6 +24,9 @@ function UserProfile(){
     const [isFollowing, setIsFollowing] = useState(false);
     const [checkingFollowStatus, setCheckingFollowStatus] = useState(true);
 
+    const [followersCount, setFollowersCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
+
 
     useEffect(() => {
         if(!userId){
@@ -39,7 +42,11 @@ function UserProfile(){
                 const docSnap = await getDoc(docRef);
 
                 if(docSnap.exists()){
-                    setProfileData(docSnap.data());
+                    const data = docSnap.data();
+                    setProfileData(data);
+
+                    setFollowersCount(data.followersCount || 0);
+                    setFollowingCount(data.followingCount || 0);
                 }
                 else{
                     setErrorProfile("User not found")
@@ -162,6 +169,14 @@ const handleFollow = async () => {
     });
     console.log(`Added to batch: ${targetUserFollowersDocRef.path}`);
 
+    const currentUserRef = doc(db, "users", currentUser.uid);
+    batch.update(currentUserRef,{followingCount : increment(1)} )
+    console.log(`Added to batch: ${currentUserRef.path} to increment followingCount`);
+
+    const targetUserRef = doc(db, "users", userId);
+    batch.update(targetUserRef, {followersCount: increment(1)});
+    console.log(`Added to batch:${targetUserRef.path} to increment followersCount`)
+
 
     try {
         console.log("Committing follow batch...");
@@ -170,6 +185,16 @@ const handleFollow = async () => {
 
         setIsFollowing(true); // Update React state to reflect the successful follow
         console.log("isFollowing state set to TRUE.");
+
+       if (currentUser.uid === userId) {
+            // User is viewing THEIR OWN profile (e.g., /profile/myUid)
+            // Their 'following' count increases because THEY followed someone.
+            setFollowingCount(prev => prev + 1);
+        } else {
+            // User is viewing SOMEONE ELSE'S profile (e.g., /profile/otherUid)
+            // The 'followers' count of the profile they are viewing increases.
+            setFollowersCount(prev => prev + 1);
+        }
 
     } catch (error) {
         console.error("Error following user (batch commit failed):", error);
@@ -198,7 +223,15 @@ const handleUnfollow = async () => {
 
     const targetUserFollowersDocRef = doc(db, "users", userId, "followers", currentUser.uid);
     batch.delete(targetUserFollowersDocRef);
-    console.log(`Added delete to batch for: ${targetUserFollowersDocRef.path}`)
+    console.log(`Added delete to batch for: ${targetUserFollowersDocRef.path}`);
+
+    const currentUserRef = doc(db, "users", currentUser.uid);
+    batch.update(currentUserRef, {followingCount: increment(-1)});
+    console.log(`Added to batch: ${currentUserRef.path} to decrement followingCount`);
+
+    const targetUserRef = doc(db, "users", userId);
+    batch.update(targetUserRef, { followersCount: increment(-1) });
+    console.log(`Added to batch: ${targetUserRef.path} to decrement followersCount`);
 
 
     try{
@@ -208,6 +241,14 @@ const handleUnfollow = async () => {
 
         setIsFollowing(false);
         console.log("isFollowing state set to false");
+
+        if (currentUser.uid === userId) {
+            // User is viewing THEIR OWN profile
+            setFollowingCount(prev => prev - 1);
+        } else {
+            // User is viewing SOMEONE ELSE'S profile
+            setFollowersCount(prev => prev - 1);
+        }
     }
     catch(error){
         console.error("Error unfollowing user (batch commit failed):", error)
@@ -285,6 +326,13 @@ return(
                         }}>{isFollowing ? "Unfollow" : "Follow"}</button>
                     )
                 )}
+
+
+                <div style={{ display: 'flex', alignItems: 'center', color: '#4a5568', fontSize: '14px', marginTop: '10px', marginBottom: '16px', gap: '16px' }}>
+                    <span style={{ fontWeight: 'bold' }}>{followersCount} Followers</span>
+                    <span style={{ fontWeight: 'bold' }}>{followingCount} Following</span>
+                </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', color: '#4a5568', fontSize: '14px', marginBottom: '16px', gap: '8px' }}>
                     <span>Joined in {joinedYear}</span>
                     <span style={{ height: '16px', width: '1px', background: '#cbd5e0', margin: '0 8px' }}></span>

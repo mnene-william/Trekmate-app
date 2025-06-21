@@ -15,12 +15,27 @@ service cloud.firestore {
       // OR
       // 2. The user is authenticated AND they are *only* modifying the 'participants' field.
       allow update: if request.auth != null && (
-        request.auth.uid == resource.data.creatorId || // User is the creator
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']) // Only 'participants' field is being changed
+        request.auth.uid == resource.data.creatorId ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants'])
       );
 
       // Allow delete only if the user is the creator
       allow delete: if request.auth != null && request.auth.uid == resource.data.creatorId;
+    }
+
+    // Rules for the 'comments' Subcollection within 'trips'
+    match /trips/{tripId}/comments/{commentId} {
+      allow read: if true; // Anyone can read comments associated with a trip.
+      allow create: if request.auth != null; // Only authenticated users can create comments.
+      // Allow delete if the user is the comment creator (assuming 'userId' field in comment document)
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Rules for the 'likes' Subcollection within 'trips'
+    match /trips/{tripId}/likes/{userId} { // The document ID here is the userId of the person liking
+      allow read: if true; // Anyone can read likes to get the count.
+      // Allow a user to create/delete a like document ONLY if the document ID matches their UID
+      allow create, delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Rule for the 'users' collection (main user profiles)
@@ -30,11 +45,26 @@ service cloud.firestore {
       // Users can create their own profile (e.g., when signing up)
       allow create: if request.auth != null;
       // Users can update their own profile
-      allow update: if request.auth != null && request.auth.uid == userId;
-      // Users cannot delete their profile via the app
+  
       allow delete: if false;
 
-    
+      
+      // Allow update operations:
+      allow update: if request.auth != null && (
+        // Case 1: The user is updating their own document (e.g., bio, photoURL, their own followingCount)
+        request.auth.uid == userId ||
+
+        // Case 2: The user is updating *another* user's profile, specifically the 'followersCount'.
+        // This is crucial for cross-user count updates initiated by follow/unfollow actions.
+        // It ensures *only* the 'followersCount' can be changed by another user, preventing malicious updates.
+        (request.auth.uid != userId && // It's not the user's own profile
+         request.resource.data.keys().hasAll(['followersCount']) && // The update includes 'followersCount'
+         request.resource.data.keys().size() == 1 // AND only 'followersCount' is being updated
+        )
+      );
+
+
+
 
       // Subcollection for users who this 'userId' is FOLLOWING
       // Example path: /users/userA_ID/following/userB_ID
@@ -57,18 +87,14 @@ service cloud.firestore {
         // Any authenticated user can read this subcollection (to see who follows a user).
         allow read: if request.auth != null;
       }
-
-
     } // End of match /users/{userId}
 
-    // Rule for the 'notifications' collection (if you decided to keep this from earlier discussion)
-    // If you haven't added this yet, you can add it now. If it's not needed, you can omit.
+    // Rule for the 'notifications' collection
     match /notifications/{notificationId} {
       allow create: if request.auth != null;
-      allow read, update: if request.auth != null && request.auth.uid == resource.data.recipientId;
+      allow read, update: if request.auth != null && resource.data.recipientId == request.auth.uid; // Corrected comparison for recipientId
       allow delete: if false;
     }
-
 
     // This default rule denies access to any other collections not explicitly matched above
     match /{document=**} {

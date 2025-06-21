@@ -1,197 +1,282 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, getDoc, getDocs, updateDoc, arrayUnion, arrayRemove, collection, query, where, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, updateDoc, arrayUnion, arrayRemove, collection, query, where, deleteDoc, onSnapshot, setDoc, orderBy, addDoc, serverTimestamp} from 'firebase/firestore';
 import Header from './Header';
 import { useAuth } from '../Context/AuthContext';
 
 function TripDetails() {
     const { tripId } = useParams();
-    const {currentUser} = useAuth();
+    const { currentUser } = useAuth(); // Destructure currentUser
     const navigate = useNavigate();
 
     const [trip, setTrip] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // Initial loading for the main trip data
     const [error, setError] = useState('');
 
     const [isJoining, setIsJoining] = useState(false);
     const [isJoined, setIsJoined] = useState(false);
     const [isCreator, setIsCreator] = useState(false);
-    const [participantUsernames, setParticipantUsernames] = useState({}); 
+    const [participantUsernames, setParticipantUsernames] = useState({});
 
+    const [comments, setComments] = useState([]);
+    const [newCommentText, setNewCommentText] = useState('');
+    const [likesCount, setLikesCount] = useState(0);
+    const [userLiked, setUserLiked] = useState(false);
+    const [loadingComments, setLoadingComments] = useState(true);
+    const [loadingLikes, setLoadingLikes] = useState(true);
+
+
+    // Effect for fetching and subscribing to main trip details
     useEffect(() => {
-        const fetchTripDetails = async () => {
-            if (!tripId) {
-                setError("No trip ID provided.");
-                setLoading(false);
-                return;
-            }
+        if (!tripId) {
+            setError("No trip ID provided.");
+            setLoading(false);
+            return;
+        }
 
-            try {
-                const tripDocRef = doc(db, 'trips', tripId);
-                const tripDocSnap = await getDoc(tripDocRef);
+        setLoading(true); // Start loading when tripId changes or component mounts
+        const tripDocRef = doc(db, 'trips', tripId);
 
-                if (tripDocSnap.exists()) {
-                   const data = {id: tripDocSnap.id, ...tripDocSnap.data()};
+        const unsubscribeTrip = onSnapshot(tripDocRef, async (docSnap) => {
+            if (docSnap.exists()) {
+                const data = { id: docSnap.id, ...docSnap.data() };
+                setTrip(data);
+                setError(''); // Clear any previous errors
 
-                    setTrip(data);
-                    console.log("Current Trip Data (from Firestore):", data); // This log is crucial
+                console.log("Current Trip Data (from Firestore - onSnapshot):", data);
 
+                const currentParticipants = data.participants || [];
 
-
-                const currentParticipants  = data.participants || [];
-
-                console.log("Trip ID:", tripId);
-                   console.log("Current Trip Data (from Firestore):", data);
-                   console.log("Participants UIDs from trip data:", currentParticipants);
-
-                if(currentUser){
+                // Update isJoined and isCreator based on real-time data
+                if (currentUser) {
                     setIsJoined(currentParticipants.includes(currentUser.uid));
                     setIsCreator(data.creatorId === currentUser.uid);
-
-                }
-                else{
+                } else {
                     setIsJoined(false);
                     setIsCreator(false);
                 }
 
-                if(currentParticipants.length > 0){
+                // Fetch participant usernames if there are participants
+                if (currentParticipants.length > 0) {
                     const usersRef = collection(db, 'users');
                     const q = query(usersRef, where('uid', 'in', currentParticipants));
-                    const usersSnapshot = await getDocs(q);
-                    // --- ADD THIS CONSOLE LOG ---
-                       console.log("Firestore Query object (q):", q);
-                       // --- END ADDITION ---
-                       console.log("Users Snapshot from Firestore:", usersSnapshot.empty ? "EMPTY" : usersSnapshot.docs.map(d => ({id: d.id, data: d.data()})));
-                    const usernames = {};
-                    usersSnapshot.forEach((doc) => {
-                        usernames[doc.id] = doc.data().username || doc.data().displayName || 'Unknown User'
-                    });
+                    const usersSnapshot = await getDocs(q); // Use getDocs for one-time fetch of usernames
 
-                    // --- ADD THIS CONSOLE LOG ---
-                       console.log("Constructed participantUsernames object:", usernames);
-                       // --- END ADDITION ---
+                    const usernames = {};
+                    usersSnapshot.forEach((userDoc) => {
+                        usernames[userDoc.id] = userDoc.data().username || userDoc.data().displayName || 'Unknown User';
+                    });
                     setParticipantUsernames(usernames);
+                } else {
+                    setParticipantUsernames({}); // Clear if no participants
                 }
-            } 
-            else{
+            } else {
+                console.log("No such trip document!");
+                setTrip(null); // Set trip to null if it doesn't exist
                 setError('Trip not found.');
             }
-            } catch(err){
-                console.error("Error fetching trip details:", err);
-                setError("Failed to load trip details.");
+            setLoading(false); // End loading after snapshot is received
+        }, (err) => {
+            console.error("Error fetching real-time trip details:", err);
+            setError("Failed to load trip details: " + err.message);
+            setLoading(false);
+        });
+
+        // Cleanup function for trip listener
+        return () => unsubscribeTrip();
+    }, [tripId, currentUser]); // Re-run if tripId or currentUser changes
+
+
+    // Effect for comments (already mostly correct, just minor improvements)
+    useEffect(() => {
+        if (!tripId) {
+            setLoadingComments(false);
+            return;
+        }
+        setLoadingComments(true);
+
+        const commentsRef = collection(db, 'trips', tripId, 'comments');
+        const q = query(commentsRef, orderBy('timestamp', 'asc'));
+
+        const unsubscribeComments = onSnapshot(q, (snapshot) => {
+            const fetchedComments = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setComments(fetchedComments);
+            setLoadingComments(false);
+            setError(''); // Clear error if comments load successfully
+        }, (err) => {
+            console.error("Error fetching comments:", err);
+            setError("Failed to load comments.");
+            setLoadingComments(false);
+        });
+        return () => unsubscribeComments();
+    }, [tripId]); // currentUser isn't strictly needed here unless you filter comments by user,
+                  // but it's fine to keep if you want to re-fetch comments if user changes.
+                  // However, comments are usually static to the trip.
+
+    // Effect for likes (already mostly correct, just minor improvements)
+    useEffect(() => {
+        if (!tripId) {
+            setLoadingLikes(false);
+            return;
+        }
+
+        setLoadingLikes(true);
+        const likesRef = collection(db, 'trips', tripId, 'likes');
+
+        const unsubscribeLikes = onSnapshot(likesRef, async (snapshot) => {
+            setLikesCount(snapshot.size);
+            // Check if current user has liked
+            if (currentUser) {
+                const userLikeDoc = await getDoc(doc(likesRef, currentUser.uid));
+                setUserLiked(userLikeDoc.exists());
+            } else {
+                setUserLiked(false);
             }
-            finally{
-                setLoading(false);
-            }
-        };
-        fetchTripDetails();
-    }, [tripId, currentUser]);
+            setLoadingLikes(false);
+        }, (err) => {
+            console.error("Error fetching likes:", err);
+            setLoadingLikes(false);
+        });
+        return () => unsubscribeLikes();
+    }, [tripId, currentUser]); // currentUser is important here to update `userLiked` status
+
+    // --- Other functions (handleManageTrip, handleDeleteTrip, handleJoinLeaveTrip, handlePostComment, handleLikeToggle) remain largely the same ---
 
     const handleManageTrip = () => {
-        if(trip && trip.id){
+        if (trip && trip.id) {
             navigate(`/create-trip/${trip.id}`);
         }
     };
 
-    const handleDeleteTrip = async () =>{
-        if(!currentUser){
-            setError("You must be logged in yo delete a trip");
+    const handleDeleteTrip = async () => {
+        if (!currentUser) {
+            setError("You must be logged in to delete a trip");
             return;
         }
-        if(!isCreator){
+        if (!isCreator) {
             setError("You are not authorized to delete this trip.");
             return;
         }
-        if(window.confirm("Are you sure you want to delete this trip? This action canoot be undone.")){
-            try{
+        if (window.confirm("Are you sure you want to delete this trip? This action cannot be undone.")) {
+            try {
                 await deleteDoc(doc(db, 'trips', tripId));
-                alert('Trip deleted successfullu!');
+                alert('Trip deleted successfully!');
                 navigate('/homepage');
-            }
-            catch(err){
+            } catch (err) {
                 console.error("Error deleting trip:", err);
                 setError('Failed to delete trip:' + err.message);
             }
         }
-    }
+    };
 
     const handleJoinLeaveTrip = async () => {
-        if(!currentUser){
-            setError("You must me logged in to join or leave a trip.");
+        if (!currentUser) {
+            setError("You must be logged in to join or leave a trip.");
             return;
         }
-        if(isCreator){
-            return
+        if (isCreator) {
+            // Creators cannot join/leave their own trip, they manage it.
+            setError("As the trip creator, you cannot join/leave your own trip. Use 'Edit Trip' instead.");
+            return;
         }
         setIsJoining(true);
         setError('');
 
-
-        try{
+        try {
             const tripDocRef = doc(db, 'trips', tripId);
-            let updatedParticipants;
+            // The onSnapshot listener for the main trip will automatically update `trip` state,
+            // so we don't need to manually re-fetch the trip document here after update.
 
-            if(isJoined){
-                await updateDoc(tripDocRef, {participants: arrayRemove(currentUser.uid)});
-                updatedParticipants = trip.participants.filter(uid => uid !== currentUser.uid)
-                setIsJoined(false);
+            if (isJoined) {
+                await updateDoc(tripDocRef, { participants: arrayRemove(currentUser.uid) });
                 console.log("User left the trip:", trip.title);
-            }
-            else{
-                await updateDoc(tripDocRef, {participants: arrayUnion(currentUser.uid)});
-                updatedParticipants = [...(trip.participants) || [], currentUser.uid];
-                setIsJoined(true);
+            } else {
+                await updateDoc(tripDocRef, { participants: arrayUnion(currentUser.uid) });
                 console.log("User joined the trip", trip.title);
             }
 
+            // The onSnapshot for the main trip data will handle updating `setTrip` and `setParticipantUsernames`
+            // Removing the manual fetch of updated participants and usernames here
+            // because the main useEffect's onSnapshot handles it.
 
-            if(updatedParticipants.length > 0){
-                const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('uid', 'in', updatedParticipants));
-                // --- ADD THIS CONSOLE LOG (in handleJoinLeaveTrip) ---
-                console.log("handleJoinLeaveTrip: Updated Participants UIDs:", updatedParticipants);
-                console.log("handleJoinLeaveTrip: Firestore Query object (q):", q);
-                // --- END ADDITION ---
-                const usersSnapshot = await getDocs(q);
-                                // --- ADD THIS CONSOLE LOG (in handleJoinLeaveTrip) ---
-                console.log("handleJoinLeaveTrip: Users Snapshot from Firestore:", usersSnapshot.empty ? "EMPTY" : usersSnapshot.docs.map(d => ({id: d.id, data: d.data()})));
-                // --- END ADDITION ---
-
-                const usernames ={};
-                usersSnapshot.forEach((doc) =>{
-                    usernames[doc.id] = doc.data().username ||doc.data().displayName || "Unknown User"
-                });
-                // --- ADD THIS CONSOLE LOG (in handleJoinLeaveTrip) ---
-                console.log("handleJoinLeaveTrip: Constructed participantUsernames object:", usernames);
-                // --- END ADDITION ---
-                setParticipantUsernames(usernames);
-            }
-
-
-            const updatedDocSnap = await getDoc(tripDocRef);
-            if(updatedDocSnap.exists()){
-                setTrip({id: updatedDocSnap.id, ...updatedDocSnap.data()});
-            }
-
-        }
-        catch(err){
+        } catch (err) {
             console.error("Error joining/leaving trip:", err);
-            setError("Filed to update trip status:", + err.message);
-        }
-        finally{
+            setError("Failed to update trip status: " + err.message);
+        } finally {
             setIsJoining(false);
         }
+    };
 
-    }
+    const handlePostComment = async (e) => {
+        e.preventDefault();
+
+        if (!newCommentText.trim() || !currentUser) {
+            alert("Please enter a comment and make sure you are logged in.");
+            return;
+        }
+        try {
+            // Ensure currentUser.displayName or username is prioritized.
+            // Adjust based on your AuthContext's currentUser structure.
+            const userName = currentUser.displayName || currentUser.username || currentUser.email.split('@')[0];
+
+            // Use currentUser.photoURL directly if available
+            const userPhotoUrl = currentUser.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${userName}&radius=50&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`;
+
+            const commentsCollectionRef = collection(db, 'trips', tripId, 'comments');
+
+            await addDoc(commentsCollectionRef, {
+                userId: currentUser.uid,
+                userName: userName,
+                userPhotoUrl: userPhotoUrl,
+                text: newCommentText.trim(),
+                timestamp: serverTimestamp(),
+            });
+            setNewCommentText('');
+            setError('');
+        } catch (err) {
+            console.error("Error posting comment:", err);
+            setError("Failed to post comment.");
+        }
+    };
+
+    const handleLikeToggle = async () => {
+        if (!currentUser) {
+            alert("Please log in to like this trip.");
+            return;
+        }
+
+        const likeDocRef = doc(db, 'trips', tripId, 'likes', currentUser.uid);
+
+        try {
+            if (userLiked) {
+                await deleteDoc(likeDocRef);
+                console.log("Trip unliked!");
+            } else {
+                await setDoc(likeDocRef, {
+                    userId: currentUser.uid, // Store the userId who liked it
+                    timestamp: serverTimestamp(),
+                });
+                console.log("Trip liked!");
+            }
+            setError(''); // Clear error on successful like/unlike
+        } catch (err) {
+            console.error("Error toggling like:", err);
+            setError("Failed to update like status.");
+        }
+    };
 
 
-    if (loading) {
+    // --- Render Logic (remains largely the same) ---
+    if (loading || loadingComments || loadingLikes) {
         return (
             <>
                 <Header />
-                <div>
-                    <p>Loading trip details...</p>
+                <div className="container mx-auto p-4 text-center mt-8">
+                    <p className="text-gray-600">Loading trip details and interactions...</p>
                 </div>
             </>
         );
@@ -201,9 +286,9 @@ function TripDetails() {
         return (
             <>
                 <Header />
-                <div>
-                    <p>{error}</p>
-                    <button onClick={() => navigate(-1)}>Go Back</button>
+                <div className="container mx-auto p-4 text-center mt-8">
+                    <p className="text-red-500 font-semibold">{error}</p>
+                    <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Go Back</button>
                 </div>
             </>
         );
@@ -213,9 +298,9 @@ function TripDetails() {
         return (
             <>
                 <Header />
-                <div>
-                    <p>Trip details not available.</p>
-                    <button onClick={() => navigate('/homepage')}>Back Home</button>
+                <div className="container mx-auto p-4 text-center mt-8">
+                    <p className="text-gray-600">Trip details not available.</p>
+                    <button onClick={() => navigate('/homepage')} className="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Back Home</button>
                 </div>
             </>
         );
@@ -227,9 +312,9 @@ function TripDetails() {
     let primaryButtonDisabled = isJoining; // Disable during join/leave operation
 
     if (isCreator) {
-        primaryButtonText = "Edit Trip"; // Changed "Manage Trip" to "Edit Trip" for clarity on this button's direct action
-        primaryButtonClass = "bg-blue-600 hover:bg-blue-700"; // Keep blue for consistency
-        primaryButtonOnClick = handleManageTrip; // Assign the manage function
+        primaryButtonText = "Edit Trip";
+        primaryButtonClass = "bg-blue-600 hover:bg-blue-700";
+        primaryButtonOnClick = handleManageTrip;
         primaryButtonDisabled = false; // Creators can always click their edit button
     } else if (isJoined) {
         primaryButtonText = "Leave Trip";
@@ -247,9 +332,8 @@ function TripDetails() {
                         &larr; Back to Trips
                     </button>
                     {currentUser && (
-                        <div className="flex space-x-4"> {/* Use flex and space-x for multiple buttons */}
+                        <div className="flex space-x-4">
                             {isCreator ? (
-                                // Buttons for the Creator
                                 <>
                                     <button
                                         onClick={handleManageTrip}
@@ -265,7 +349,6 @@ function TripDetails() {
                                     </button>
                                 </>
                             ) : (
-                                // Button for Participants (Join/Leave)
                                 <button
                                     onClick={primaryButtonOnClick}
                                     disabled={primaryButtonDisabled}
@@ -338,12 +421,97 @@ function TripDetails() {
                 {trip.creatorName && (
                     <p className="text-gray-500 text-sm mt-8 text-right">Created by: {trip.creatorName}</p>
                 )}
+
+                {/* Like Button & Count */}
+                <div className="flex items-center space-x-4 mt-6 border-t pt-6">
+                    <button
+                        onClick={handleLikeToggle}
+                        className={`flex items-center px-4 py-2 rounded-full transition-colors duration-200 ease-in-out ${
+                            userLiked ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600'
+                        }`}
+                        disabled={!currentUser} // Disable if not logged in
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className={`h-6 w-6 ${userLiked ? 'text-white' : 'text-gray-500'}`}
+                            fill={userLiked ? 'currentColor' : 'none'}
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                            />
+                        </svg>
+                        <span className="ml-2 font-semibold">{userLiked ? 'Liked' : 'Like'}</span>
+                    </button>
+                    <span className="text-lg font-bold text-gray-800">
+                        {likesCount} {likesCount === 1 ? 'Like' : 'Likes'}
+                    </span>
+                    {!currentUser && (
+                        <span className="text-sm text-gray-600 ml-auto">
+                            <Link to="/login" className="text-blue-600 hover:underline">Log in</Link> to like.
+                        </span>
+                    )}
+                </div>
+
+                {/* Comments Section */}
+                <h2 className="text-3xl font-bold text-gray-800 mt-10 mb-6 border-t pt-8">Comments</h2>
+                <div className="comments-section bg-gray-100 p-5 rounded-lg shadow-inner">
+                    {loadingComments && <p className="text-center text-gray-600">Loading comments...</p>}
+                    {!loadingComments && comments.length === 0 && <p className="text-center text-gray-600">No comments yet. Be the first to share your thoughts!</p>}
+                    <div className="space-y-6">
+                        {comments.map(comment => (
+                            <div key={comment.id} className="bg-white p-4 rounded-lg shadow-sm flex items-start space-x-3">
+                                <img
+                                    src={comment.userPhotoUrl}
+                                    alt={comment.userName}
+                                    className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-300 flex-shrink-0"
+                                />
+                                <div className="flex-grow">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <p className="font-bold text-gray-900">{comment.userName}</p>
+                                        <span className="text-gray-500 text-xs">
+                                            {comment.timestamp ? new Date(comment.timestamp.toDate()).toLocaleString() : 'Just now'}
+                                        </span>
+                                    </div>
+                                    <p className="text-gray-700">{comment.text}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Comment Input Form */}
+                    {currentUser ? (
+                        <form onSubmit={handlePostComment} className="mt-6 flex items-center space-x-3">
+                            <input
+                                type="text"
+                                value={newCommentText}
+                                onChange={(e) => setNewCommentText(e.target.value)}
+                                placeholder="Add a comment..."
+                                className="flex-grow border border-gray-300 rounded-lg p-3 text-gray-800 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                                disabled={!currentUser}
+                            />
+                            <button
+                                type="submit"
+                                className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!currentUser || !newCommentText.trim()}
+                            >
+                                Post Comment
+                            </button>
+                        </form>
+                    ) : (
+                        <p className="text-center text-gray-600 mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            Please <Link to="/login" className="text-blue-600 font-semibold hover:underline">log in</Link> to post comments.
+                        </p>
+                    )}
+                </div>
+
             </div>
         </>
     );
 }
-
-
-
 
 export default TripDetails;
