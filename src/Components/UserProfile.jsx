@@ -5,12 +5,10 @@ import { db } from '../firebase';
 import { doc, getDoc, query, orderBy, where, getDocs, collection, setDoc, deleteDoc, writeBatch, increment, updateDoc } from 'firebase/firestore';
 import Header from './Header';
 
-
-
 function UserProfile(){
 
     const {userId} = useParams();
-    const {currentUser} = useAuth();
+    const {currentUser, logout} = useAuth();
     const navigate = useNavigate();
 
     const [profileData, setProfileData] = useState(null);
@@ -34,7 +32,6 @@ function UserProfile(){
             setLoadingProfile(false);
             return;
         }
-
 
         const fetchProfile = async () => {
             try{
@@ -96,15 +93,12 @@ useEffect(() => {
         finally{
             setLoadingUserTrips(false);
         }
-
-
     }
     fetchUserTrips();
 }, [userId]);
 
 useEffect(() => {
     const checkFollowStatus = async () => {
-        // Log the UIDs to ensure they are correct
         console.log("Checking follow status...");
         console.log("Current User UID:", currentUser?.uid);
         console.log("Profile User ID (from URL):", userId);
@@ -118,16 +112,13 @@ useEffect(() => {
 
         setCheckingFollowStatus(true);
         try {
-            // Check if currentUser is following the userId of the current profile
             const followDocRef = doc(db, "users", currentUser.uid, "following", userId);
-            console.log("Firestore Path to check:", followDocRef.path); // Log the full path
-
+            console.log("Firestore Path to check:", followDocRef.path);
             const docSnap = await getDoc(followDocRef);
-            console.log("Follow document exists:", docSnap.exists()); // Log true/false
+            console.log("Follow document exists:", docSnap.exists());
             setIsFollowing(docSnap.exists());
         } catch (error) {
             console.error("Error checking follow status:", error);
-            // Optionally handle error, e.g., show a message to the user
         } finally {
             setCheckingFollowStatus(false);
         }
@@ -137,32 +128,26 @@ useEffect(() => {
 }, [currentUser, userId]);
 
 const handleFollow = async () => {
-    console.log("handleFollow function entered!"); // <-- Keep this for initial check
-    console.log("currentUser:", currentUser); // <-- Keep for initial check
-    console.log("userId (from URL params):", userId); // <-- Keep for initial check
+    console.log("handleFollow function entered!");
+    console.log("currentUser:", currentUser);
+    console.log("userId (from URL params):", userId);
 
-    // This is the guard clause. If any of these conditions are true, the function exits.
     if (!currentUser || !userId || currentUser.uid === userId) {
         console.warn("Cannot follow: Missing user data or attempting to follow self. Current user:", currentUser, "Target ID:", userId);
-        return; // <--- IMPORTANT: The 'return' must be the only thing executed in this block
+        return;
     }
 
-    // --- ALL THE CODE BELOW THIS LINE SHOULD BE OUTSIDE THE 'if' BLOCK ---
-    setCheckingFollowStatus(true); // Disable the button while the operation is in progress
+    setCheckingFollowStatus(true);
     console.log(`Attempting to FOLLOW user: ${userId} by ${currentUser.uid}`);
 
-    // Create a batch for atomic operations
     const batch = writeBatch(db);
 
-    // 1. Add an entry to the current user's 'following' subcollection
     const currentUserFollowingDocRef = doc(db, "users", currentUser.uid, "following", userId);
     batch.set(currentUserFollowingDocRef, {
         followedAt: new Date(),
     });
     console.log(`Added to batch: ${currentUserFollowingDocRef.path}`);
 
-
-    // 2. Add an entry to the target user's 'followers' subcollection
     const targetUserFollowersDocRef = doc(db, "users", userId, "followers", currentUser.uid);
     batch.set(targetUserFollowersDocRef, {
         followedAt: new Date(),
@@ -170,7 +155,7 @@ const handleFollow = async () => {
     console.log(`Added to batch: ${targetUserFollowersDocRef.path}`);
 
     const currentUserRef = doc(db, "users", currentUser.uid);
-    batch.update(currentUserRef,{followingCount : increment(1)} )
+    batch.update(currentUserRef, {followingCount : increment(1)} )
     console.log(`Added to batch: ${currentUserRef.path} to increment followingCount`);
 
     const targetUserRef = doc(db, "users", userId);
@@ -180,27 +165,21 @@ const handleFollow = async () => {
 
     try {
         console.log("Committing follow batch...");
-        await batch.commit(); // Execute both set operations atomically
+        await batch.commit();
         console.log("Follow batch commit successful!");
 
-        setIsFollowing(true); // Update React state to reflect the successful follow
-        console.log("isFollowing state set to TRUE.");
+        setIsFollowing(true);
 
-       if (currentUser.uid === userId) {
-            // User is viewing THEIR OWN profile (e.g., /profile/myUid)
-            // Their 'following' count increases because THEY followed someone.
+        if (currentUser.uid === userId) {
             setFollowingCount(prev => prev + 1);
-        } else {
-            // User is viewing SOMEONE ELSE'S profile (e.g., /profile/otherUid)
-            // The 'followers' count of the profile they are viewing increases.
-            setFollowersCount(prev => prev + 1);
         }
+        setFollowersCount(prev => prev + 1);
 
     } catch (error) {
         console.error("Error following user (batch commit failed):", error);
-        setIsFollowing(false); // If the commit fails, revert the UI state
+        setIsFollowing(false);
     } finally {
-        setCheckingFollowStatus(false); // Re-enable the button
+        setCheckingFollowStatus(false);
         console.log("Finished handleFollow operation.");
     }
 };
@@ -243,12 +222,9 @@ const handleUnfollow = async () => {
         console.log("isFollowing state set to false");
 
         if (currentUser.uid === userId) {
-            // User is viewing THEIR OWN profile
             setFollowingCount(prev => prev - 1);
-        } else {
-            // User is viewing SOMEONE ELSE'S profile
-            setFollowersCount(prev => prev - 1);
         }
+        setFollowersCount(prev => prev - 1);
     }
     catch(error){
         console.error("Error unfollowing user (batch commit failed):", error)
@@ -260,41 +236,61 @@ const handleUnfollow = async () => {
     }
 };
 
+const handleLogout = async () => {
+    try {
+        await logout(); // Call the logout function from AuthContext
+        navigate('/login'); // Redirect to login page after successful logout
+        console.log("User logged out successfully.");
+    } catch (error) {
+        console.error("Failed to log out:", error);
+    }
+};
+
+
+const isOwnProfile = currentUser && currentUser.uid === userId;
+
 
 if(loadingProfile || loadingUserTrips){
     return(
         <>
-        <Header />
-        <div>
-            <p>Loading user profile and trips...</p>
-        </div>
-        
+            <Header />
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+                <p>Loading user profile and trips...</p>
+            </div>
         </>
     );
 }
+
 if(errorProfile || errorTrips){
     return(
         <>
-        <div>
-            <p>Error loading profile</p>
-        </div>
-        
+            <Header />
+            <div style={{ textAlign: 'center', padding: '20px', color: 'red' }}>
+                <p>Error loading profile: {errorProfile || errorTrips || 'Unknown error'}</p>
+            </div>
         </>
     );
 }
 
 if(!profileData){
-    <div>
-        <p>User profile not found</p>
-    </div>
+    return (
+        <>
+            <Header />
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+                <p>User profile not found</p>
+            </div>
+        </>
+    );
 }
 
-const joinedYear = profileData?.createdAt?.toDate  ? new Date(profileData.createdAt.toDate()).getFullYear() : "N/A";
+const joinedYear = profileData?.createdAt?.toDate ? new Date(profileData.createdAt.toDate()).getFullYear() : "N/A";
 
 
 return(
     <>
+        <Header />
         <div style={{ padding: '16px', margin: 'auto', maxWidth: '960px' }}>
+            {/* User Profile Header (unchanged except for removing the logout button) */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '32px', paddingBottom: '40px', paddingLeft: '16px', paddingRight: '16px', background: 'white', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', margin: 'auto', marginBottom: '32px' }}>
                 <img
                     src={profileData?.photoURL || `https://api.dicebear.com/8.x/initials/svg?seed=${profileData?.displayName || profileData?.uid}&radius=50&backgroundColor=b6e3f4,c0aede,d1d4f9,ffdfbf,ffd5dc`}
@@ -304,10 +300,13 @@ return(
                 <h1 style={{ fontSize: '30px', fontWeight: 'bold', color: '#1a202c', marginBottom: '8px' }}>
                     {profileData?.displayName || profileData?.username || 'Traveler'}
                 </h1>
-                {currentUser && currentUser.uid === userId ? (
-                    <button style={{ background: '#3182ce', color: 'white', fontWeight: 'bold', padding: '8px 24px', borderRadius: '9999px', transition: 'background-color 0.15s ease-in-out', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} onClick={() => navigate('/create-profile')}>
-                        Edit profile
-                    </button>
+                {isOwnProfile ? (
+                    <div style={{ display: 'flex', gap: '12px' }}> {/* Edit Profile button is still here */}
+                        <button style={{ background: '#3182ce', color: 'white', fontWeight: 'bold', padding: '8px 24px', borderRadius: '9999px', transition: 'background-color 0.15s ease-in-out', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} onClick={() => navigate('/create-profile')}>
+                            Edit profile
+                        </button>
+                        {/* --- LOG OUT BUTTON REMOVED FROM HERE --- */}
+                    </div>
                 ) : (
                     checkingFollowStatus ? (
                         <button style={{ background: '#a0aec0', color: 'white', fontWeight: 'bold', padding: '8px 24px', borderRadius: '9999px', cursor: 'not-allowed', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} disabled>
@@ -323,10 +322,11 @@ return(
                             transition: 'background-color 0.15s ease-in-out',
                             boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                             cursor: 'pointer'
-                        }}>{isFollowing ? "Unfollow" : "Follow"}</button>
+                        }} disabled={checkingFollowStatus}>
+                            {isFollowing ? "Unfollow" : "Follow"}
+                        </button>
                     )
                 )}
-
 
                 <div style={{ display: 'flex', alignItems: 'center', color: '#4a5568', fontSize: '14px', marginTop: '10px', marginBottom: '16px', gap: '16px' }}>
                     <span style={{ fontWeight: 'bold' }}>{followersCount} Followers</span>
@@ -341,12 +341,16 @@ return(
                     <span>0+ reviews</span>
                 </div>
             </div>
+
+            {/* About Section */}
             <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', margin: 'auto', marginBottom: '32px' }}>
                 <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a202c', marginBottom: '16px' }}>About</h2>
                 <p style={{ color: '#4a5568', lineHeight: '1.6' }}>
                     {profileData?.bio || "No bio yet."}
                 </p>
             </div>
+
+            {/* Trips Created Section */}
             <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', margin: 'auto', marginBottom: '32px' }}>
                 <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1a202c', marginBottom: '16px' }}>Trips Created</h2>
                 {loadingUserTrips && <p style={{ textAlign: 'center', color: '#4a5568' }}>Loading user's trips...</p>}
@@ -370,11 +374,29 @@ return(
                     </div>
                 ))}
             </div>
+
+            {/* --- NEW LOCATION FOR LOG OUT BUTTON --- */}
+            {isOwnProfile && (
+                <div style={{ textAlign: 'center', marginTop: '40px', marginBottom: '32px' }}>
+                    <button
+                        onClick={handleLogout}
+                        className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-red-500 text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5 hover:bg-red-600 transition-colors"
+                        style={{
+                            padding: '10px 30px', // Slightly larger padding for a standalone button
+                            borderRadius: '9999px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                            display: 'inline-flex', // Ensure flex properties apply if className uses them
+                        }}
+                    >
+                        Log Out
+                    </button>
+                </div>
+            )}
+            {/* --- END NEW LOCATION --- */}
+
         </div>
     </>
 );
-            }
-
-
+}
 
 export default UserProfile;
