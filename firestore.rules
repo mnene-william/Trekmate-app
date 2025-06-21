@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Rule for the 'trips' collection
+    match /trips/{tripId} {
+      // Allow anyone to read (see all trips)
+      allow read: if true;
+
+      // Allow an authenticated user to create a new trip
+      allow create: if request.auth != null;
+
+      // Allow update if:
+      // 1. The user is the creator (can update anything in the document)
+      // OR
+      // 2. The user is authenticated AND they are *only* modifying the 'participants' field.
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.creatorId || // User is the creator
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']) // Only 'participants' field is being changed
+      );
+
+      // Allow delete only if the user is the creator
+      allow delete: if request.auth != null && request.auth.uid == resource.data.creatorId;
+    }
+
+    // Rule for the 'users' collection (main user profiles)
+    match /users/{userId} {
+      // Users can read their own profile and other users can read it too
+      allow read: if true;
+      // Users can create their own profile (e.g., when signing up)
+      allow create: if request.auth != null;
+      // Users can update their own profile
+      allow update: if request.auth != null && request.auth.uid == userId;
+      // Users cannot delete their profile via the app
+      allow delete: if false;
+
+    
+
+      // Subcollection for users who this 'userId' is FOLLOWING
+      // Example path: /users/userA_ID/following/userB_ID
+      match /following/{followedUserId} {
+        // Allow a user to create/delete a document in their OWN 'following' subcollection.
+        // This means request.auth.uid (the current user) must match userId (the owner of the 'following' subcollection).
+        allow create, delete: if request.auth != null && request.auth.uid == userId;
+
+        // Any authenticated user can read this subcollection (to see who a user follows).
+        allow read: if request.auth != null;
+      }
+
+      // Subcollection for users who are FOLLOWERS of this 'userId'
+      // Example path: /users/userB_ID/followers/userA_ID
+      match /followers/{followerUserId} {
+        // A user (request.auth.uid) can create/delete a document in ANOTHER user's ('userId') 'followers' subcollection.
+        // The 'followerUserId' in the path must be the ID of the user performing the action (request.auth.uid).
+        allow create, delete: if request.auth != null && request.auth.uid == followerUserId;
+
+        // Any authenticated user can read this subcollection (to see who follows a user).
+        allow read: if request.auth != null;
+      }
+
+
+    } // End of match /users/{userId}
+
+    // Rule for the 'notifications' collection (if you decided to keep this from earlier discussion)
+    // If you haven't added this yet, you can add it now. If it's not needed, you can omit.
+    match /notifications/{notificationId} {
+      allow create: if request.auth != null;
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.recipientId;
+      allow delete: if false;
+    }
+
+
+    // This default rule denies access to any other collections not explicitly matched above
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
