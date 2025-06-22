@@ -3,10 +3,10 @@ import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
 import { useNavigate, useParams } from 'react-router-dom';
 import { collection, addDoc, Timestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
-import Header from './Header';
+import Header from './Header'; // Assuming Header component uses Tailwind for its styles
 
 function CreateTrip() {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, loading: authLoading } = useAuth(); // Renamed loading to authLoading to avoid conflict
     const { tripId } = useParams();
     const navigate = useNavigate();
 
@@ -17,35 +17,27 @@ function CreateTrip() {
         startDate: '',
         activities: '',
         endDate: '',
-        imageUrl: '', // ADDED: To store the Cloudinary image URL
+        imageUrl: '',
     });
 
     const [submitLoading, setSubmitLoading] = useState(false);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState(''); // New state for success messages
     const [pageLoading, setPageLoading] = useState(true);
     const [initialFetchError, setInitialFetchError] = useState('');
 
-    // State and Ref for Cloudinary Image Upload
     const [imageUploadLoading, setImageUploadLoading] = useState(false);
     const [imageUploadError, setImageUploadError] = useState('');
-    const cloudinaryWidgetRef = useRef(null); // Ref to store the widget instance
+    const cloudinaryWidgetRef = useRef(null);
 
     // --- Cloudinary Widget Initialization ---
-    // This useEffect hook initializes the Cloudinary widget when the component mounts.
     useEffect(() => {
-        // Ensure that `window.cloudinary` exists and the widget hasn't been created yet
         if (window.cloudinary && !cloudinaryWidgetRef.current) {
             cloudinaryWidgetRef.current = window.cloudinary.createUploadWidget(
                 {
-                    cloudName: 'doa3fpijh', // <<< IMPORTANT: REPLACE WITH YOUR CLOUD NAME
-                    uploadPreset: 'trekmate_unsigned', // <<< IMPORTANT: REPLACE WITH YOUR UNSIGNED UPLOAD PRESET NAME
-                    // Optional configurations (uncomment and adjust as needed):
-                    // sources: ['local', 'url', 'camera'], // Allow different upload sources
-                    // cropping: true, // Enable basic cropping
-                    // defaultSource: 'local',
-                    // maxImageFileSize: 2000000, // 2MB max file size (in bytes)
-                    // clientAllowedFormats: ["png", "gif", "jpeg", "jpg", "webp"], // Allowed file formats
-                    // folder: "trip_images", // Specify a default folder for uploads in Cloudinary
+                    cloudName: 'doa3fpijh', // Replace with your Cloudinary Cloud Name
+                    uploadPreset: 'trekmate_unsigned', // Replace with your Cloudinary Unsigned Upload Preset
+                    // Other configurations...
                 },
                 (error, result) => {
                     if (!error && result && result.event === "success") {
@@ -58,16 +50,17 @@ function CreateTrip() {
                         setImageUploadError("Image upload failed.");
                         setImageUploadLoading(false);
                     } else if (result && result.event === "queues-start") {
-                        setImageUploadLoading(true); // Indicate upload is starting
+                        setImageUploadLoading(true);
                         setImageUploadError('');
+                    } else if (result && result.event === "close") {
+                        // Handle widget close event: e.g., if user closes without selecting an image
+                        setImageUploadLoading(false); // Ensure loading is reset if widget is closed
                     }
-                    // You might want to handle 'close' event here as well to reset upload state if widget is closed without upload
                 }
             );
         }
-    }, []); // Empty dependency array ensures this runs only once on mount
+    }, []);
 
-    // Function to open the Cloudinary Upload Widget
     const openCloudinaryWidget = () => {
         if (cloudinaryWidgetRef.current) {
             cloudinaryWidgetRef.current.open();
@@ -84,7 +77,6 @@ function CreateTrip() {
                     if (tripSnap.exists()) {
                         const data = tripSnap.data();
 
-                        // Ensure activities is an array before joining, or an empty string if not present
                         const activitiesString = Array.isArray(data.activities) ? data.activities.join('\n') : data.activities || '';
 
                         setTripData({
@@ -98,18 +90,18 @@ function CreateTrip() {
                         });
                         setPageLoading(false);
                     } else {
-                        setInitialFetchError("Trip not found."); // Set error if trip ID exists but doc doesn't
+                        setInitialFetchError("Trip not found. It might have been deleted or never existed.");
                         setPageLoading(false);
                     }
                 } catch (err) {
                     console.error("Error fetching trip for edit:", err);
-                    setInitialFetchError("Failed to load trip data.");
+                    setInitialFetchError("Failed to load trip data. Please try again.");
                     setPageLoading(false);
                 }
             } else {
                 setPageLoading(false);
             }
-        }
+        };
         fetchTrip();
     }, [tripId]);
 
@@ -121,6 +113,7 @@ function CreateTrip() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccessMessage(''); // Clear previous success message
         setSubmitLoading(true);
 
         if (!currentUser) {
@@ -130,12 +123,11 @@ function CreateTrip() {
         }
 
         if (!tripData.title || !tripData.destination || !tripData.description || !tripData.startDate || !tripData.endDate) {
-            setError('Please fill in all required fields.');
+            setError('Please fill in all required fields: Title, Destination, Description, Start Date, and End Date.');
             setSubmitLoading(false);
             return;
         }
 
-        // Date validation: ensure end date is not before start date
         if (new Date(tripData.startDate) > new Date(tripData.endDate)) {
             setError('End Date cannot be before Start Date.');
             setSubmitLoading(false);
@@ -143,15 +135,14 @@ function CreateTrip() {
         }
 
         try {
-            // Correctly split activities by newline and filter empty strings
             const activitiesArray = tripData.activities.split('\n').map(activity => activity.trim()).filter(activity => activity !== '');
-            console.log("Activities Array to be saved:", activitiesArray);
 
-           const combinedSearchText = `${tripData.title} ${tripData.destination} ${tripData.description} ${tripData.creatorName}`.toLowerCase();
+            // Ensure creatorName is available for search keywords
+            const creatorNameForSearch = currentUser.displayName || currentUser.email.split("@")[0];
+
+            const combinedSearchText = `${tripData.title} ${tripData.destination} ${tripData.description} ${creatorNameForSearch} ${activitiesArray.join(' ')}`.toLowerCase();
             const allWords = combinedSearchText.split(/[\s,.\-!?"'#$@%^&*()_+={}\[\]:;<>\/]+/).filter(Boolean);
-
-            const destinationKeywords = [...new Set(allWords)];
-            console.log("Generateg destinationKeywords:", destinationKeywords);
+            const destinationKeywords = [...new Set(allWords)]; // Unique words
 
             const tripFieldsToSave = {
                 title: tripData.title,
@@ -162,24 +153,22 @@ function CreateTrip() {
                 activities: activitiesArray,
                 imageUrl: tripData.imageUrl,
                 creatorId: currentUser.uid,
-                creatorName: currentUser.displayName || currentUser.email.split("@")[0],
+                creatorName: creatorNameForSearch, // Use the correct creator name
                 destinationKeywords: destinationKeywords,
             };
 
             if (tripId) {
-                // Update existing trip
                 await updateDoc(doc(db, 'trips', tripId), tripFieldsToSave);
-                alert("Trip updated successfully!");
+                setSuccessMessage("Trip updated successfully!");
             } else {
-                // Create new trip
                 await addDoc(collection(db, 'trips'), {
                     ...tripFieldsToSave,
                     createdAt: Timestamp.now(),
-                    participants: [], // Only set participants for new trips
+                    participants: [],
                 });
-                alert("Trip created successfully!");
+                setSuccessMessage("Trip created successfully!");
 
-                // Reset form fields and image URL only for new trip creation
+                // Reset form for new trip creation
                 setTripData({
                     title: '',
                     destination: '',
@@ -191,30 +180,39 @@ function CreateTrip() {
                 });
             }
 
-            setSubmitLoading(false);
-            navigate('/homepage'); // Redirect to homepage after successful operation
+            // Clear success message and navigate after a delay
+            setTimeout(() => {
+                setSuccessMessage('');
+                navigate('/homepage');
+            }, 2000); // Navigate after 2 seconds
 
         } catch (error) {
             console.error("Error creating/updating trip:", error);
             setError('Failed to process trip: ' + error.message);
+            // Clear error message after a delay
+            setTimeout(() => setError(''), 5000);
+        } finally {
             setSubmitLoading(false);
         }
     };
 
     // Redirect unauthenticated users
     useEffect(() => {
-        if (!loading && !currentUser) {
+        if (!authLoading && !currentUser) {
             navigate('/login');
         }
-    }, [currentUser, loading, navigate]);
+    }, [currentUser, authLoading, navigate]);
 
-    // Render loading state if auth is still loading
-    if (loading || pageLoading) {
+    // Apply consistent styling from previous components using Tailwind classes
+    const formInputClasses = "form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-14 placeholder:text-[#60758a] p-4 text-base font-normal leading-normal";
+    const textareaClasses = "form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-auto min-h-[120px] placeholder:text-[#60758a] p-4 text-base font-normal leading-normal"; // Adjusted min-h for textarea
+
+    if (authLoading || pageLoading) {
         return (
             <>
                 <Header />
-                <div style={styles.container}>
-                    <p style={styles.loadingText}>Loading trip data...</p>
+                <div className="flex justify-center items-center h-screen"> {/* Tailwind for centering loading */}
+                    <p className="text-xl text-gray-700">Loading trip data...</p>
                 </div>
             </>
         );
@@ -224,9 +222,14 @@ function CreateTrip() {
         return (
             <>
                 <Header />
-                <div style={styles.container}>
-                    <p style={styles.errorMessage}>{initialFetchError}</p>
-                    <button onClick={() => navigate('/homepage')} style={styles.submitButton}>Back to Home</button>
+                <div className="flex flex-col justify-center items-center h-screen p-4">
+                    <p className="text-red-600 text-lg mb-4 text-center">{initialFetchError}</p>
+                    <button
+                        onClick={() => navigate('/homepage')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-colors"
+                    >
+                        Back to Home
+                    </button>
                 </div>
             </>
         );
@@ -235,110 +238,123 @@ function CreateTrip() {
     return (
         <>
             <Header />
-            <div style={styles.container}>
-                {/* NEW: Dynamic Heading */}
-                <h2 style={styles.heading}>{tripId ? 'Edit Trip' : 'Create a New Trip'}</h2>
-                <form onSubmit={handleSubmit} style={styles.form}>
-                    {error && <p style={styles.errorMessage}>{error}</p>}
+            <div className="container mx-auto p-6 md:p-8 lg:p-10 max-w-2xl bg-white rounded-lg shadow-lg my-8">
+                <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+                    {tripId ? 'Edit Trip' : 'Create a New Trip'}
+                </h2>
 
-                    <div style={styles.formGroup}>
-                        <label htmlFor="title" style={styles.label}>Trip Title:</label>
+                {/* Success Message Display */}
+                {successMessage && (
+                    <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded shadow-md" role="alert">
+                        <p className="font-bold">Success!</p>
+                        <p>{successMessage}</p>
+                    </div>
+                )}
+                {/* Error Message Display */}
+                {error && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-md" role="alert">
+                        <p className="font-bold">Error!</p>
+                        <p>{error}</p>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6"> {/* Use space-y for consistent vertical spacing */}
+                    <div>
+                        <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">Trip Title:</label>
                         <input
                             type="text"
                             id="title"
                             value={tripData.title}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className={formInputClasses}
+                            placeholder="e.g., Summer Adventure in the Alps"
                         />
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label htmlFor="destination" style={styles.label}>Destination:</label>
+                    <div>
+                        <label htmlFor="destination" className="block text-gray-700 text-sm font-bold mb-2">Destination:</label>
                         <input
                             type="text"
                             id="destination"
                             value={tripData.destination}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className={formInputClasses}
+                            placeholder="e.g., Swiss Alps, Switzerland"
                         />
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label htmlFor="description" style={styles.label}>Description:</label>
+                    <div>
+                        <label htmlFor="description" className="block text-gray-700 text-sm font-bold mb-2">Description:</label>
                         <textarea
                             id="description"
                             rows="5"
                             value={tripData.description}
                             onChange={handleChange}
-                            style={styles.textarea}
+                            className={textareaClasses}
+                            placeholder="Describe your amazing trip..."
                         ></textarea>
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label htmlFor="startDate" style={styles.label}>Start Date:</label>
-                        <input
-                            type="date"
-                            id="startDate"
-                            value={tripData.startDate}
-                            onChange={handleChange}
-                            required
-                            style={styles.input}
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Grid for dates */}
+                        <div>
+                            <label htmlFor="startDate" className="block text-gray-700 text-sm font-bold mb-2">Start Date:</label>
+                            <input
+                                type="date"
+                                id="startDate"
+                                value={tripData.startDate}
+                                onChange={handleChange}
+                                required
+                                className={formInputClasses}
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="endDate" className="block text-gray-700 text-sm font-bold mb-2">End Date:</label>
+                            <input
+                                type="date"
+                                id="endDate"
+                                value={tripData.endDate}
+                                onChange={handleChange}
+                                required
+                                className={formInputClasses}
+                            />
+                        </div>
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label htmlFor="endDate" style={styles.label}>End Date:</label>
-                        <input
-                            type="date"
-                            id="endDate"
-                            value={tripData.endDate}
-                            onChange={handleChange}
-                            required
-                            style={styles.input}
-                        />
-                    </div>
-
-                    <div style={styles.formGroup}>
-                        <label htmlFor="activities" style={styles.label}>Activities (each on a new line):</label> {/* UPDATED LABEL HINT */}
+                    <div>
+                        <label htmlFor="activities" className="block text-gray-700 text-sm font-bold mb-2">Activities (each on a new line):</label>
                         <textarea
                             id="activities"
                             rows="5"
                             value={tripData.activities}
                             onChange={handleChange}
-                            style={styles.textarea}
-                            placeholder="e.g.,&#10;Hiking&#10;Swimming&#10;Sightseeing" // Placeholder with newlines
+                            className={textareaClasses}
+                            placeholder="e.g.,&#10;Hiking Trails&#10;Lake Swimming&#10;City Tour&#10;Local Cuisine Tasting"
                         />
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Trip Image (Optional):</label>
+                    <div>
+                        <label className="block text-gray-700 text-sm font-bold mb-2">Trip Image (Optional):</label>
                         <button
                             type="button"
                             onClick={openCloudinaryWidget}
-                            style={{
-                                ...styles.uploadButton,
-                                ...(imageUploadLoading ? styles.uploadButtonDisabled : {}),
-                            }}
                             disabled={imageUploadLoading}
+                            className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-colors duration-200
+                                ${imageUploadLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}
+                            `}
                         >
-                            {imageUploadLoading ? 'Uploading Image...' : 'Choose Image'}
+                            {imageUploadLoading ? 'Uploading Image...' : (tripData.imageUrl ? 'Change Image' : 'Choose Image')}
                         </button>
-                        {imageUploadError && <p style={styles.errorMessage}>{imageUploadError}</p>}
+                        {imageUploadError && <p className="text-red-500 text-xs mt-2">{imageUploadError}</p>}
                         {tripData.imageUrl && (
-                            <div style={{ marginTop: '15px', textAlign: 'center' }}>
-                                <p style={{ marginBottom: '5px', color: '#4a5568', fontSize: '14px' }}>Image Preview:</p>
+                            <div className="mt-4 text-center">
+                                <p className="text-gray-600 text-sm mb-2">Image Preview:</p>
                                 <img
                                     src={tripData.imageUrl}
                                     alt="Trip Preview"
-                                    style={{
-                                        maxWidth: '150px',
-                                        maxHeight: '150px',
-                                        borderRadius: '8px',
-                                        objectFit: 'cover',
-                                        border: '1px solid #e2e8f0',
-                                    }}
+                                    className="max-w-[150px] max-h-[150px] object-cover rounded-lg border border-gray-200 mx-auto"
                                 />
                             </div>
                         )}
@@ -347,116 +363,16 @@ function CreateTrip() {
                     <button
                         type="submit"
                         disabled={submitLoading || imageUploadLoading}
-                        style={{
-                            ...styles.submitButton,
-                            ...(submitLoading || imageUploadLoading ? styles.submitButtonDisabled : {}),
-                        }}
+                        className={`w-full py-3 px-4 rounded-lg font-bold text-white text-lg transition-colors duration-200
+                            ${(submitLoading || imageUploadLoading) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}
+                        `}
                     >
-                        {submitLoading ? (tripId ? 'Saving Changes...' : 'Creating Trip...') : (tripId ? 'Save Changes' : 'Create Trip')} {/* DYNAMIC BUTTON TEXT */}
+                        {submitLoading ? (tripId ? 'Saving Changes...' : 'Creating Trip...') : (tripId ? 'Save Changes' : 'Create Trip')}
                     </button>
                 </form>
             </div>
         </>
     );
 }
-
-// Inline styles object
-const styles = {
-    container: {
-        padding: '24px',
-        maxWidth: '600px',
-        margin: '32px auto',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    },
-    heading: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        color: '#1a202c',
-        marginBottom: '24px',
-        textAlign: 'center',
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    formGroup: {
-        marginBottom: '16px',
-    },
-    label: {
-        display: 'block',
-        marginBottom: '8px',
-        fontWeight: 'bold',
-        color: '#4a5568',
-        fontSize: '15px',
-    },
-    input: {
-        width: 'calc(100% - 20px)',
-        padding: '10px',
-        border: '1px solid #cbd5e0',
-        borderRadius: '5px',
-        fontSize: '16px',
-        boxSizing: 'border-box',
-    },
-    textarea: {
-        width: 'calc(100% - 20px)',
-        padding: '10px',
-        border: '1px solid #cbd5e0',
-        borderRadius: '5px',
-        fontSize: '16px',
-        minHeight: '100px',
-        resize: 'vertical',
-        boxSizing: 'border-box',
-    },
-    submitButton: {
-        backgroundColor: '#3182ce',
-        color: 'white',
-        fontWeight: 'bold',
-        padding: '12px 24px',
-        borderRadius: '8px',
-        fontSize: '18px',
-        border: 'none',
-        cursor: 'pointer',
-        marginTop: '24px',
-        transition: 'background-color 0.2s ease-in-out',
-        width: '100%',
-    },
-    submitButtonDisabled: {
-        backgroundColor: '#a0aec0',
-        cursor: 'not-allowed',
-    },
-    errorMessage: {
-        color: '#e53e3e',
-        backgroundColor: '#fef2f2',
-        border: '1px solid #feb2b2',
-        padding: '12px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    loadingText: {
-        textAlign: 'center',
-        color: '#4a5568',
-        marginTop: '32px',
-    },
-    uploadButton: {
-        backgroundColor: '#4a90e2',
-        color: 'white',
-        fontWeight: 'bold',
-        padding: '10px 15px',
-        borderRadius: '5px',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '16px',
-        transition: 'background-color 0.2s ease-in-out',
-        width: '100%',
-    },
-    uploadButtonDisabled: {
-        backgroundColor: '#a0aec0',
-        cursor: 'not-allowed',
-    }
-};
 
 export default CreateTrip;
