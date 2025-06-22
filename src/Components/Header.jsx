@@ -118,7 +118,6 @@ function Header() {
                         <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/my-trips" onClick={toggleMobileMenu}>My Trips</Link>
                         <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/explore" onClick={toggleMobileMenu}>Explore</Link> {/* Updated to /explore */}
                         {/* Example Inbox link, assuming you have one */}
-                        <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/inbox" onClick={toggleMobileMenu}>Inbox</Link>
                         
                         {/* Auth buttons in mobile menu if not logged in */}
                         {!currentUser && (
