@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, query, onSnapshot, orderBy, where } from 'firebase/firestore';
 import Header from './Header'; // Assuming Header is in the components folder
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 
 function ExplorePage() {
+    const navigate = useNavigate(); // Initialize useNavigate hook
+
     const [trips, setTrips] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -69,6 +71,19 @@ function ExplorePage() {
         <>
             <Header />
             <div className="container mx-auto p-4 bg-gray-50">
+                {/* Back button added here */}
+                <div className="mb-6">
+                    <button
+                        onClick={() => navigate(-1)} // Navigates back one step in history
+                        className="flex items-center text-gray-700 hover:text-blue-600 transition-colors duration-200 focus:outline-none"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back
+                    </button>
+                </div>
+
                 <div className="container mx-auto px-4 mt-6 mb-10">
                     <div className="relative max-w-2xl mx-auto">
                         <input
@@ -124,8 +139,8 @@ function ExplorePage() {
                     {trips.map(trip => (
                         <Link to={`/trips/${trip.id}`} key={trip.id}
                             className="flex-shrink-0 trip-card-link
-                                      transform transition duration-300 ease-in-out
-                                      hover:scale-105 hover:shadow-lg"
+                                       transform transition duration-300 ease-in-out
+                                       hover:scale-105 hover:shadow-lg"
                         >
                             <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
                                 <img

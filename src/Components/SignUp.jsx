@@ -16,7 +16,7 @@ function SignUp() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
-    const navigate = useNavigate();
+    const navigate = useNavigate(); // Initialize useNavigate hook
 
     const handleSignUp = async (e) => {
         e.preventDefault();
@@ -77,6 +77,20 @@ function SignUp() {
             <div className="layout-container flex h-full grow flex-col">
                 <div className="px-4 sm:px-10 md:px-20 lg:px-40 flex flex-1 justify-center py-5">
                     <div className="layout-content-container flex flex-col w-full max-w-[512px] py-5 flex-1">
+
+                        {/* NEW: Back Home Button */}
+                        <div className="mb-4 self-start"> {/* Aligns button to the left */}
+                            <button
+                                onClick={() => navigate('/homepage')} // Navigate to /homepage
+                                className="flex items-center text-gray-700 hover:text-blue-600 transition-colors duration-200 focus:outline-none"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back Home
+                            </button>
+                        </div>
+
                         <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">Sign up to TrekMate</h2>
 
                         {message && (

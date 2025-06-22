@@ -239,6 +239,19 @@ function CreateTrip() {
         <>
             <Header />
             <div className="container mx-auto p-6 md:p-8 lg:p-10 max-w-2xl bg-white rounded-lg shadow-lg my-8">
+                {/* NEW: Back Button */}
+                <div className="mb-6">
+                    <button
+                        onClick={() => navigate(-1)} // Navigates back one step in history
+                        className="flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200 focus:outline-none"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back
+                    </button>
+                </div>
+
                 <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
                     {tripId ? 'Edit Trip' : 'Create a New Trip'}
                 </h2>

@@ -29,7 +29,7 @@ function CreateProfile() {
             // Use the part before '@' as a seed if no display name
             seed = user.email.split('@')[0];
         }
-        
+
         // Corrected URL with '&' before colorful=true and more background colors
         return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=c0aede,d1d4f9,b6e3f4,ffd5dc,a9d9d9,ffe7ba&backgroundType=solid,gradientLinear&scale=110&colorful=true`;
     };
@@ -172,6 +172,20 @@ function CreateProfile() {
                     {/* Header should usually be in App.jsx or Layout.jsx, NOT here */}
                     <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f5] px-10 py-3">
                         <div className="flex items-center gap-4 text-[#111418]">
+                            {/* Conditional Back Button */}
+                            {isEditingExistingProfile && (
+                                <button
+                                    onClick={() => navigate(-1)} // Navigates back one step in history
+                                    className="flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200 focus:outline-none"
+                                    aria-label="Go back"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                    <span className="ml-1 text-sm font-medium hidden sm:inline">Back</span>
+                                </button>
+                            )}
+
                             <div className="size-4">
                                 <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path

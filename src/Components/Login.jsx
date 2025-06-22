@@ -20,7 +20,7 @@ function Login() {
             console.log('User logged in successfully!');
             // You could add a success message state here if you want to show it briefly before navigating
             // setMessage('Login successful! Redirecting...');
-            navigate('/HomePage');
+            navigate('/HomePage'); // Navigate to HomePage after successful login
         } catch (err) {
             console.error('Error logging in:', err);
             let errorMessage = 'Failed to log in. Please try again.'; // Default generic message
@@ -46,8 +46,22 @@ function Login() {
     return (
         <div className="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
             <div className="layout-container flex h-full grow flex-col">
-                <div className="flex flex-1 justify-center items-center px-4 sm:px-10 md:px-20 lg:px-40 py-5"> {/* Responsive padding */}
-                    <div className="layout-content-container flex flex-col w-full max-w-[512px] py-5 flex-1"> {/* w-full for responsiveness */}
+                <div className="flex flex-1 justify-center items-center px-4 sm:px-10 md:px-20 lg:px-40 py-5">
+                    <div className="layout-content-container flex flex-col w-full max-w-[512px] py-5 flex-1">
+
+                        {/* NEW: Back Home Button */}
+                        <div className="mb-4 self-start"> {/* self-start aligns it to the left within its flex container */}
+                            <button
+                                onClick={() => navigate('/homepage')} // Navigate directly to /homepage
+                                className="flex items-center text-gray-700 hover:text-blue-600 transition-colors duration-200 focus:outline-none"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back Home
+                            </button>
+                        </div>
+
                         <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">
                             Welcome back
                         </h2>
@@ -60,7 +74,7 @@ function Login() {
                             </div>
                         )}
 
-                        <form onSubmit={handleLogin} className="flex flex-col w-full max-w-[480px] mx-auto gap-4 px-4 py-3"> {/* Centered form */}
+                        <form onSubmit={handleLogin} className="flex flex-col w-full max-w-[480px] mx-auto gap-4 px-4 py-3">
                             <label className="flex flex-col flex-1 w-full">
                                 <p className="text-[#111418] text-base font-medium leading-normal pb-2">Email</p>
                                 <input
@@ -69,7 +83,7 @@ function Login() {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    required // Added required attribute
+                                    required
                                 />
                             </label>
 
@@ -81,7 +95,7 @@ function Login() {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    required // Added required attribute
+                                    required
                                 />
                             </label>
 
@@ -92,9 +106,9 @@ function Login() {
 
                             <div className="flex px-4 py-3 w-full">
                                 <button
-                                    type="submit" // Change to type="submit" for forms
+                                    type="submit"
                                     disabled={loading}
-                                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-14 px-5 flex-1 bg-[#0c7ff2] text-white text-base font-bold leading-normal tracking-[0.015em] disabled:opacity-50 hover:bg-blue-600 transition-colors" // Adjusted height and px for consistency
+                                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-14 px-5 flex-1 bg-[#0c7ff2] text-white text-base font-bold leading-normal tracking-[0.015em] disabled:opacity-50 hover:bg-blue-600 transition-colors"
                                 >
                                     <span className="truncate">{loading ? 'Logging in...' : 'Log in'}</span>
                                 </button>
