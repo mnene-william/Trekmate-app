@@ -326,7 +326,7 @@ function TripDetails() {
     return (
         <>
             <Header />
-            <div className="container mx-auto p-8" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+            <div className="container mx-auto p-8 max-w-4xl lg:max-w-5xl" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
                 <div className="flex justify-between items-center mb-4">
                     <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
                         &larr; Back to Trips

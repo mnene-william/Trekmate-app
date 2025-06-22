@@ -10,12 +10,12 @@ function HomePage() {
     const navigate = useNavigate();
 
     const [trips, setTrips] = useState([]);
-    const [loadingTrips, setLoadingTrips] = useState(true);
+    const [loadingTrips, setLoadingTrips] = useState(true); // CORRECTED LINE
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
     const [buddies, setBuddies] = useState([]);
-    const [loadingBuddies, setLoadingBuddies] = useState(true);
+    const [loadingBuddies, setLoadingBuddies] = useState(true); // CORRECTED LINE
     const [errorBuddies, setErrorBuddies] = useState('');
 
     useEffect(() => {
@@ -25,21 +25,26 @@ function HomePage() {
         const tripsCollectionRef = collection(db, 'trips');
         let tripsQuery;
 
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayIsoDate = `${year}-${month}-${day}`;
+
         if (searchQuery.trim() !== '') {
             const searchLower = searchQuery.trim().toLowerCase();
-
-            // MODIFIED QUERY FOR "CONTAINS" SEARCH USING 'destinationKeywords'
             tripsQuery = query(
                 tripsCollectionRef,
-                where('destinationKeywords', 'array-contains', searchLower)
-                // IMPORTANT: If you need to sort results (e.g., by createdAt) after using 'array-contains',
-                // you generally cannot combine 'orderBy' on a different field in the same query without a specific composite index.
-                // You would typically fetch all matching documents first, and then sort them client-side in your React code.
-                // For now, results will be ordered by their document ID (default Firestore behavior for array-contains).
+                where('destinationKeywords', 'array-contains', searchLower),
+                where('endDate', '>=', todayIsoDate),
+                orderBy('endDate', 'asc')
             );
         } else {
-            // Default query to show all recent trips if no search query
-            tripsQuery = query(tripsCollectionRef, orderBy('createdAt', 'desc'));
+            tripsQuery = query(
+                tripsCollectionRef,
+                where('endDate', '>=', todayIsoDate),
+                orderBy('endDate', 'asc')
+            );
         }
 
         const unsubscribe = onSnapshot(tripsQuery, (querySnapshot) => {
@@ -59,9 +64,8 @@ function HomePage() {
             setLoadingTrips(false);
         });
 
-        // Cleanup the listener on component unmount or when dependencies change
         return () => unsubscribe();
-    }, [searchQuery]); // Re-run this effect when searchQuery changes
+    }, [searchQuery]);
 
     useEffect(() => {
         const fetchBuddies = async () => {
@@ -115,21 +119,27 @@ function HomePage() {
                 {loadingTrips && <p className="text-center text-gray-600">Loading trips...</p>}
                 {error && <p className="text-center text-red-500">{error}</p>}
                 {!loadingTrips && trips.length === 0 && !error && (
-                    <p className="text-center text-gray-600">No trips found matching your search. Try a different destination!</p>
+                    <p className="text-center text-gray-600">No upcoming trips found matching your search. Try a different destination or create a new trip!</p>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex overflow-x-auto gap-6 pb-4 md:pb-6 custom-scroll-bar">
                     {trips.map(trip => (
-                        <Link to={`/trips/${trip.id}`} key={trip.id} className="trip-card-link">
-                            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                        <Link to={`/trips/${trip.id}`} key={trip.id}
+                            className="flex-shrink-0 w-64 md:w-80 trip-card-link
+                                      transform transition duration-300 ease-in-out
+                                      hover:scale-105 hover:shadow-lg"
+                        >
+                            <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
                                 <img
                                     src={trip.imageUrl || "https://via.placeholder.com/400x250?text=No+Image"}
                                     alt={trip.title}
                                     className="w-full h-48 object-cover"
                                 />
-                                <div className="p-4">
-                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{trip.title}</h3>
-                                    <p className="text-gray-700 text-sm mb-2">{trip.destination}</p>
-                                    <p className="text-gray-600 text-sm">{trip.description.substring(0, 100)}...</p>
+                                <div className="p-4 flex flex-col justify-between flex-grow">
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-gray-900 mb-2">{trip.title}</h3>
+                                        <p className="text-gray-700 text-sm mb-2">{trip.destination}</p>
+                                        <p className="text-gray-600 text-sm line-clamp-3">{trip.description}</p>
+                                    </div>
                                     <p className="text-gray-500 text-xs mt-2">
                                         {trip.startDate} to {trip.endDate} by {trip.creatorName}
                                     </p>

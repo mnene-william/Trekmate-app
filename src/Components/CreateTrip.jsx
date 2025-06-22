@@ -147,6 +147,12 @@ function CreateTrip() {
             const activitiesArray = tripData.activities.split('\n').map(activity => activity.trim()).filter(activity => activity !== '');
             console.log("Activities Array to be saved:", activitiesArray);
 
+           const combinedSearchText = `${tripData.title} ${tripData.destination} ${tripData.description} ${tripData.creatorName}`.toLowerCase();
+            const allWords = combinedSearchText.split(/[\s,.\-!?"'#$@%^&*()_+={}\[\]:;<>\/]+/).filter(Boolean);
+
+            const destinationKeywords = [...new Set(allWords)];
+            console.log("Generateg destinationKeywords:", destinationKeywords);
+
             const tripFieldsToSave = {
                 title: tripData.title,
                 destination: tripData.destination,
@@ -157,6 +163,7 @@ function CreateTrip() {
                 imageUrl: tripData.imageUrl,
                 creatorId: currentUser.uid,
                 creatorName: currentUser.displayName || currentUser.email.split("@")[0],
+                destinationKeywords: destinationKeywords,
             };
 
             if (tripId) {
