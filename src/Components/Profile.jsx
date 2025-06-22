@@ -6,7 +6,7 @@ import Header from './Header';
 import {useNavigate} from 'react-router-dom';
 
 function Profile() {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, loading, logout } = useAuth();
     const navigate = useNavigate();
 
 
@@ -95,6 +95,17 @@ function Profile() {
         fetchUserTrips();
     }, [currentUser]);
 
+
+    const handleLogout = async () => {
+    try {
+        await logout(); // Call the logout function from AuthContext
+        navigate('/login'); // Redirect to login page after successful logout
+        console.log("User logged out successfully.");
+    } catch (error) {
+        console.error("Failed to log out:", error);
+    }
+};
+
     if (loadingProfile || loadingUserTrips) {
         return (
             <>
@@ -180,6 +191,20 @@ function Profile() {
                             </div>
                         </div>
                     ))}
+                </div>
+                <div style={{ textAlign: 'center', marginTop: '40px', marginBottom: '32px' }}>
+                    <button
+                        onClick={handleLogout}
+                        className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-red-500 text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5 hover:bg-red-600 transition-colors"
+                        style={{
+                            padding: '10px 30px', // Slightly larger padding for a standalone button
+                            borderRadius: '9999px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                            display: 'inline-flex', // Ensure flex properties apply if className uses them
+                        }}
+                    >
+                        Log Out
+                    </button>
                 </div>
             </div>
         </>
