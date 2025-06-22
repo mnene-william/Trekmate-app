@@ -12,6 +12,32 @@ function Header() {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
 
+    // --- Start of Re-added DiceBear Avatar Function ---
+    const getDiceBearAvatarUrl = (user) => {
+        let seed = user.uid; // Default fallback to UID for uniqueness
+
+        if (user.displayName) {
+            seed = user.displayName; // Use the display name for initials
+        } else if (user.email) {
+            // Use the part before '@' as a seed if no display name
+            seed = user.email.split('@')[0];
+        }
+        
+        // Corrected URL with '&' before colorful=true and more background colors
+        return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=c0aede,d1d4f9,b6e3f4,ffd5dc,a9d9d9,ffe7ba&backgroundType=solid,gradientLinear&scale=110&colorful=true`;
+    };
+    // --- End of Re-added DiceBear Avatar Function ---
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/login'); // Redirect to login page after logout
+        } catch (error) {
+            console.error("Failed to log out:", error);
+            // Optionally set an error message to display to the user
+        }
+    };
+
     return (
         <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f5] px-4 py-3 md:px-10">
             {/* Left Section: Logo (TrekMate) */}
@@ -28,19 +54,15 @@ function Header() {
             </div>
 
             {/* Main Navigation Links (hidden on mobile, visible and flex on medium screens and up) */}
-            <div className="hidden md:flex items-center gap-9">
+            <div className="hidden md:flex items-center gap-9 ml-8">
                 <Link className="text-[#111418] text-sm font-medium leading-normal" to="/homepage">Home</Link>
                 <Link className="text-[#111418] text-sm font-medium leading-normal" to="/create-trip">Create Trip</Link>
                 <Link className="text-[#111418] text-sm font-medium leading-normal" to="/my-trips">My Trips</Link>
-                <Link className="text-[#111418] text-sm font-medium leading-normal" to="/explore-page">Explore</Link>
+                <Link className="text-[#111418] text-sm font-medium leading-normal" to="/explore">Explore</Link> {/* Updated to /explore */}
             </div>
 
             {/* Right Section: Bell Icon, Search Bar (if any), Profile/Auth Buttons, and Mobile Hamburger Icon */}
-            <div className="flex flex-1 justify-end items-center gap-4 md:gap-8"> {/* Adjusted gap for mobile */}
-                {/* Search Bar (hidden on mobile, visible on medium screens and up) */}
-                {/* Note: Your label is currently empty, it can be styled later */}
-                <label className="hidden md:flex flex-col min-w-40 !h-10 max-w-64"></label>
-
+            <div className="flex flex-1 justify-end items-center gap-4 md:gap-8">
                 {/* Notification Bell */}
                 <button
                     className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#f0f2f5] text-[#111418] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5"
@@ -56,13 +78,16 @@ function Header() {
 
                 {/* User Profile / Auth Buttons */}
                 {currentUser ? (
-                    <Link to="/profile" className="flex items-center justify-center rounded-full size-10 bg-[#0c7ff2] text-white text-base font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user">
-                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                        </svg>
+                    <Link to="/profile" className="flex items-center justify-center rounded-full size-10 bg-[#0c7ff2] text-white text-base font-bold overflow-hidden">
+                        {/* Corrected logic: Prioritize photoURL, otherwise use DiceBear */}
+                        <img
+                            src={currentUser.photoURL || getDiceBearAvatarUrl(currentUser)}
+                            alt="User Profile or Avatar"
+                            className="w-full h-full object-cover"
+                        />
                     </Link>
                 ) : (
-                    <div className="hidden md:flex gap-4"> {/* Auth buttons hidden on mobile, visible on medium screens and up */}
+                    <div className="hidden md:flex gap-4">
                         <Link to="/login" className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#f0f2f5] text-[#111418] text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5 hover:bg-gray-200 transition-colors">
                             Log In
                         </Link>
@@ -91,7 +116,10 @@ function Header() {
                         <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/homepage" onClick={toggleMobileMenu}>Home</Link>
                         <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/create-trip" onClick={toggleMobileMenu}>Create Trip</Link>
                         <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/my-trips" onClick={toggleMobileMenu}>My Trips</Link>
+                        <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/explore" onClick={toggleMobileMenu}>Explore</Link> {/* Updated to /explore */}
+                        {/* Example Inbox link, assuming you have one */}
                         <Link className="text-[#111418] text-lg font-medium leading-normal w-full py-2 hover:bg-gray-100" to="/inbox" onClick={toggleMobileMenu}>Inbox</Link>
+                        
                         {/* Auth buttons in mobile menu if not logged in */}
                         {!currentUser && (
                             <>
@@ -102,6 +130,14 @@ function Header() {
                                     Sign Up
                                 </Link>
                             </>
+                        )}
+                        {currentUser && (
+                            <button
+                                onClick={() => { handleLogout(); toggleMobileMenu(); }} // Call handleLogout and close menu
+                                className="flex items-center justify-center rounded-lg h-10 bg-red-500 text-white text-base font-bold leading-normal w-full py-2 hover:bg-red-600"
+                            >
+                                Log Out
+                            </button>
                         )}
                     </div>
                 </div>

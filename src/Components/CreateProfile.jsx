@@ -19,16 +19,29 @@ function CreateProfile() {
     const [loading, setLoading] = useState(false);
     const [isEditingExistingProfile, setIsEditingExistingProfile] = useState(false);
 
+    // Function to generate DiceBear avatar URL (copied from Header)
+    const getDiceBearAvatarUrl = (user) => {
+        let seed = user.uid; // Default fallback to UID for uniqueness
+
+        if (user.displayName) {
+            seed = user.displayName; // Use the display name for initials
+        } else if (user.email) {
+            // Use the part before '@' as a seed if no display name
+            seed = user.email.split('@')[0];
+        }
+        
+        // Corrected URL with '&' before colorful=true and more background colors
+        return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=c0aede,d1d4f9,b6e3f4,ffd5dc,a9d9d9,ffe7ba&backgroundType=solid,gradientLinear&scale=110&colorful=true`;
+    };
+
     // useEffect to fetch and pre-fill existing profile data
     useEffect(() => {
         const fetchUserProfile = async () => {
             if (!currentUser) {
-                // If no current user, clear form and ensure no editing state
                 setIsEditingExistingProfile(false);
                 setUsername('');
                 setBio('');
                 setProfileImageUrl('');
-                // The main return block below handles redirection for non-logged-in users.
                 return;
             }
 
@@ -37,20 +50,20 @@ function CreateProfile() {
 
             if (docSnap.exists()) {
                 console.log("Firestore doc data:", docSnap.data());
-                const data = docSnap.data(); // Get the data from the document snapshot
+                const data = docSnap.data();
 
-                // Pre-fill the individual state variables with existing data
                 setUsername(data.username || currentUser.displayName || currentUser.email.split('@')[0]);
-                setBio(data.bio || ''); // Use existing bio, or empty string if null/undefined
-                setProfileImageUrl(data.photoURL || currentUser.photoURL || ''); // Use existing photoURL, fallback to Auth photoURL
-                setIsEditingExistingProfile(true); // User document exists, so we are editing
+                setBio(data.bio || '');
+                // Use photoURL from Firestore, then Auth, then generate DiceBear if none exists
+                setProfileImageUrl(data.photoURL || currentUser.photoURL || getDiceBearAvatarUrl(currentUser));
+                setIsEditingExistingProfile(true);
             } else {
                 console.log("Firestore doc does NOT exist for this user.");
-                // Initialize with values from Firebase Auth if no Firestore document exists yet
                 setUsername(currentUser.displayName || currentUser.email.split('@')[0]);
-                setBio(''); // Start with empty bio
-                setProfileImageUrl(currentUser.photoURL || ''); // Use Auth photoURL as initial image
-                setIsEditingExistingProfile(false); // No user document, so we are creating
+                setBio('');
+                // If no Firestore doc, use Auth photoURL or generate DiceBear
+                setProfileImageUrl(currentUser.photoURL || getDiceBearAvatarUrl(currentUser));
+                setIsEditingExistingProfile(false);
             }
         };
 
@@ -76,7 +89,7 @@ function CreateProfile() {
             (error, result) => {
                 if (!error && result && result.event === 'success') {
                     console.log('Done uploading Cloudinary image:', result.info);
-                    setProfileImageUrl(result.info.secure_url);
+                    setProfileImageUrl(result.info.secure_url); // Update state with the new URL
                     setError('');
                 } else if (error) {
                     console.error('Cloudinary upload error:', error);
@@ -107,7 +120,7 @@ function CreateProfile() {
             // Update Firebase Auth profile
             await updateProfile(currentUser, {
                 displayName: username.trim(),
-                photoURL: profileImageUrl,
+                photoURL: profileImageUrl, // Use the URL from state (Cloudinary or DiceBear)
             });
             console.log('Firebase Auth profile updated (displayName, photoURL)');
 
@@ -125,7 +138,7 @@ function CreateProfile() {
                 username: username.trim(),
                 email: currentUser.email,
                 bio: bio.trim(),
-                photoURL: profileImageUrl,
+                photoURL: profileImageUrl, // Save the URL to Firestore as well
                 createdAt: createdAt,
                 lastUpdated: new Date(),
             }, { merge: true });
@@ -133,7 +146,7 @@ function CreateProfile() {
             console.log('User profile data saved/updated');
             console.log('Profile created/updated successfully');
 
-            navigate('/profile');
+            navigate('/profile'); // Navigate to the profile view page
         } catch (err) {
             console.error("An error occurred while creating/updating your profile:", err);
             setError("Failed to create/update profile: " + err.message);
@@ -153,8 +166,10 @@ function CreateProfile() {
 
     return (
         <>
+            {/* IMPORTANT: Remove this header if you have a global Header component in App.jsx or Layout.jsx */}
             <div className="relative flex size-full min-h-screen flex-col bg-white overflow-x-hidden" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
                 <div className="layout-container flex h-full grow flex-col">
+                    {/* Header should usually be in App.jsx or Layout.jsx, NOT here */}
                     <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f5] px-10 py-3">
                         <div className="flex items-center gap-4 text-[#111418]">
                             <div className="size-4">
@@ -172,12 +187,14 @@ function CreateProfile() {
                             disabled={loading}
                             className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f0f2f5] text-[#111418] text-sm font-bold leading-normal tracking-[0.015em] disabled:opacity-50"
                         >
-                            <span className="truncate">{loading ? 'Saving...' : 'Next'}</span>
+                            <span className="truncate">
+                                {loading ? 'Saving...' : (isEditingExistingProfile ? 'Save Changes' : 'Next')}
+                            </span>
                         </button>
                     </header>
 
                     <div className="px-40 flex flex-1 justify-center py-5">
-                        <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-\[960px] flex-1">
+                        <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 flex-1">
                             <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">
                                 {isEditingExistingProfile ? 'Edit your profile' : 'Create your profile'}
                             </h2>
@@ -214,13 +231,12 @@ function CreateProfile() {
                                 <div className="flex flex-col items-center gap-6 rounded-lg border-2 border-dashed border-[#dbe0e6] px-6 py-14">
                                     <div className="flex max-w-[480px] flex-col items-center gap-2">
                                         {/* Profile Image Preview: Use profileImageUrl as the single source */}
-                                        {profileImageUrl && (
-                                            <img
-                                                src={profileImageUrl}
-                                                alt="Profile Preview"
-                                                className="w-24 h-24 rounded-full object-cover border-2 border-gray-300 mb-4"
-                                            />
-                                        )}
+                                        {/* Now correctly uses DiceBear if no image is set */}
+                                        <img
+                                            src={profileImageUrl} // This state variable now holds either uploaded URL or DiceBear URL
+                                            alt="Profile Preview"
+                                            className="w-24 h-24 rounded-full object-cover border-2 border-gray-300 mb-4"
+                                        />
                                         <p className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em] max-w-[480px] text-center">Add a photo</p>
                                         <p className="text-[#111418] text-sm font-normal leading-normal max-w-[480px] text-center">Recommended size: 1000x1000px</p>
                                     </div>
@@ -229,7 +245,7 @@ function CreateProfile() {
                                         onClick={handleImageUpload}
                                         className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f0f2f5] text-[#111418] text-sm font-bold leading-normal tracking-[0.015em]"
                                     >
-                                        <span className="truncate">{profileImageUrl ? 'Change Image' : 'Upload Image'}</span>
+                                        <span className="truncate">{profileImageUrl && profileImageUrl !== getDiceBearAvatarUrl(currentUser) ? 'Change Image' : 'Upload Image'}</span>
                                     </button>
                                 </div>
                             </div>
