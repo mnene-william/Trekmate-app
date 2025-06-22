@@ -308,7 +308,7 @@ function UserProfile() {
                     <div className="flex items-center text-gray-600 text-sm mt-2 gap-2">
                         <span>Joined in {joinedYear}</span>
                         <span className="h-4 w-px bg-gray-300 mx-2"></span>
-                        <span>{userTrips.length} trips created</span>
+                        <span>{userTrips.length} trips</span>
                         <span className="h-4 w-px bg-gray-300 mx-2"></span>
                     </div>
                 </div>
