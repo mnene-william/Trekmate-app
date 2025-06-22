@@ -157,7 +157,7 @@ function CreateProfile() {
 
     if (!currentUser) {
         return (
-            <div className="flex flex-1 justify-center items-center py-5" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+            <div className="flex flex-1 justify-center items-center py-5 font-inter">
                 <p className="text-[#111418] text-base font-normal leading-normal">Please log in or sign up to create your profile.</p>
                 <button onClick={() => navigate('/login')} className="ml-4 px-4 py-2 rounded-lg bg-[#0c7ff2] text-white text-base font-bold leading-normal">Go to Login</button>
             </div>
@@ -167,10 +167,10 @@ function CreateProfile() {
     return (
         <>
             {/* IMPORTANT: Remove this header if you have a global Header component in App.jsx or Layout.jsx */}
-            <div className="relative flex size-full min-h-screen flex-col bg-white overflow-x-hidden" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+            <div className="relative flex size-full min-h-screen flex-col bg-white overflow-x-hidden font-inter">
                 <div className="layout-container flex h-full grow flex-col">
                     {/* Header should usually be in App.jsx or Layout.jsx, NOT here */}
-                    <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f5] px-10 py-3">
+                    <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f2f5] px-4 sm:px-6 md:px-10 py-3"> {/* Adjusted px padding */}
                         <div className="flex items-center gap-4 text-[#111418]">
                             {/* Conditional Back Button */}
                             {isEditingExistingProfile && (
@@ -207,20 +207,20 @@ function CreateProfile() {
                         </button>
                     </header>
 
-                    <div className="px-40 flex flex-1 justify-center py-5">
-                        <div className="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 flex-1">
+                    <div className="px-4 sm:px-8 md:px-20 lg:px-40 flex flex-1 justify-center py-5"> {/* Adjusted px padding */}
+                        <div className="layout-content-container flex flex-col w-full max-w-xl py-5 flex-1"> {/* w-full ensures it uses available space, max-w-xl is ~576px */}
                             <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">
                                 {isEditingExistingProfile ? 'Edit your profile' : 'Create your profile'}
                             </h2>
 
                             {error && <p className="text-red-500 text-center mb-4">{error}</p>}
 
-                            <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                <label className="flex flex-col min-w-40 flex-1">
+                            <div className="flex flex-col gap-4 px-4 py-3"> {/* Changed to flex-col for consistent stacking on all screens */}
+                                <label className="flex flex-col flex-1">
                                     <p className="text-[#111418] text-base font-medium leading-normal pb-2">Username</p>
                                     <input
                                         placeholder="@username"
-                                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border border-[#dbe0e6] bg-white focus:border-[#dbe0e6] h-14 placeholder:text-[#60758a] p-[15px] text-base font-normal leading-normal"
+                                        className="form-input flex w-full resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border border-[#dbe0e6] bg-white focus:border-[#dbe0e6] h-14 placeholder:text-[#60758a] p-[15px] text-base font-normal leading-normal"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
                                         required
@@ -228,12 +228,12 @@ function CreateProfile() {
                                 </label>
                             </div>
 
-                            <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                <label className="flex flex-col min-w-40 flex-1">
+                            <div className="flex flex-col gap-4 px-4 py-3"> {/* Changed to flex-col for consistent stacking on all screens */}
+                                <label className="flex flex-col flex-1">
                                     <p className="text-[#111418] text-base font-medium leading-normal pb-2">Bio (optional)</p>
                                     <textarea
                                         placeholder="Tell us a bit about yourself"
-                                        className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border border-[#dbe0e6] bg-white focus:border-[#dbe0e6] min-h-36 placeholder:text-[#60758a] p-[15px] text-base font-normal leading-normal"
+                                        className="form-input flex w-full resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border border-[#dbe0e6] bg-white focus:border-[#dbe0e6] min-h-36 placeholder:text-[#60758a] p-[15px] text-base font-normal leading-normal"
                                         value={bio}
                                         onChange={(e) => setBio(e.target.value)}
                                     ></textarea>
@@ -243,16 +243,15 @@ function CreateProfile() {
                             <h3 className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Profile photo</h3>
                             <div className="flex flex-col p-4">
                                 <div className="flex flex-col items-center gap-6 rounded-lg border-2 border-dashed border-[#dbe0e6] px-6 py-14">
-                                    <div className="flex max-w-[480px] flex-col items-center gap-2">
+                                    <div className="flex flex-col items-center gap-2">
                                         {/* Profile Image Preview: Use profileImageUrl as the single source */}
-                                        {/* Now correctly uses DiceBear if no image is set */}
                                         <img
                                             src={profileImageUrl} // This state variable now holds either uploaded URL or DiceBear URL
                                             alt="Profile Preview"
                                             className="w-24 h-24 rounded-full object-cover border-2 border-gray-300 mb-4"
                                         />
-                                        <p className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em] max-w-[480px] text-center">Add a photo</p>
-                                        <p className="text-[#111418] text-sm font-normal leading-normal max-w-[480px] text-center">Recommended size: 1000x1000px</p>
+                                        <p className="text-[#111418] text-lg font-bold leading-tight tracking-[-0.015em] text-center">Add a photo</p>
+                                        <p className="text-[#111418] text-sm font-normal leading-normal text-center">Recommended size: 1000x1000px</p>
                                     </div>
                                     <button
                                         type="button"
