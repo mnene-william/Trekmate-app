@@ -32,7 +32,7 @@ function Header() {
                 <Link className="text-[#111418] text-sm font-medium leading-normal" to="/homepage">Home</Link>
                 <Link className="text-[#111418] text-sm font-medium leading-normal" to="/create-trip">Create Trip</Link>
                 <Link className="text-[#111418] text-sm font-medium leading-normal" to="/my-trips">My Trips</Link>
-                <Link className="text-[#111418] text-sm font-medium leading-normal" to="/inbox">Inbox</Link>
+                <Link className="text-[#111418] text-sm font-medium leading-normal" to="/explore-page">Explore</Link>
             </div>
 
             {/* Right Section: Bell Icon, Search Bar (if any), Profile/Auth Buttons, and Mobile Hamburger Icon */}
