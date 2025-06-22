@@ -72,7 +72,7 @@ function MyTripsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {myTrips.map(trip => (
                         <Link to={`/trips/${trip.id}`} key={trip.id} className="block border rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden">
-                            {trip.imageUrl && <img src={trip.imageUrl} alt={trip.title} className="w-full h-48 object-cover" />}
+                            {trip.imageUrl && <img src={trip.imageUrl || "https://via.placeholder.com/400x250?text=No+Image"} alt={trip.title} className="w-full h-48 object-cover" />}
                             <div className="p-4">
                                 <h3 className="text-xl font-semibold mb-2">{trip.title}</h3>
                                 <p className="text-gray-600 text-sm mb-2">{trip.destination}</p>
