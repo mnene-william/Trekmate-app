@@ -195,7 +195,7 @@ function UserProfile() {
     const handleLogout = async () => {
         try {
             await logout();
-            navigate('/login');
+            navigate('/homepage');
         } catch (error) {
             console.error("Failed to log out:", error);
         }
@@ -297,7 +297,6 @@ function UserProfile() {
                         <span className="h-4 w-px bg-gray-300 mx-2"></span>
                         <span>{userTrips.length} trips created</span>
                         <span className="h-4 w-px bg-gray-300 mx-2"></span>
-                        <span>0+ reviews</span> {/* Consider making this dynamic or removing */}
                     </div>
                 </div>
 

@@ -99,7 +99,7 @@ function Profile() {
     const handleLogout = async () => {
     try {
         await logout(); // Call the logout function from AuthContext
-        navigate('/login'); // Redirect to login page after successful logout
+        navigate('/homepage'); // Redirect to login page after successful logout
         console.log("User logged out successfully.");
     } catch (error) {
         console.error("Failed to log out:", error);
@@ -161,7 +161,6 @@ function Profile() {
                         <span style={{ height: '16px', width: '1px', background: '#cbd5e0', margin: '0 8px' }}></span>
                         <span>{userTrips.length} trips</span>
                         <span style={{ height: '16px', width: '1px', background: '#cbd5e0', margin: '0 8px' }}></span>
-                        <span>0+ reviews</span>
                     </div>
                     <button style={{ background: '#3182ce', color: 'white', fontWeight: 'bold', padding: '8px 24px', borderRadius: '9999px', transition: 'background-color 0.15s ease-in-out', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} onClick={() => navigate('/create-profile')}>
                         Edit profile

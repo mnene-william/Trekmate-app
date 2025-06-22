@@ -10,12 +10,12 @@ function HomePage() {
     const navigate = useNavigate();
 
     const [trips, setTrips] = useState([]);
-    const [loadingTrips, setLoadingTrips] = useState(true); // CORRECTED LINE
+    const [loadingTrips, setLoadingTrips] = useState(true);
     const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
     const [buddies, setBuddies] = useState([]);
-    const [loadingBuddies, setLoadingBuddies] = useState(true); // CORRECTED LINE
+    const [loadingBuddies, setLoadingBuddies] = useState(true);
     const [errorBuddies, setErrorBuddies] = useState('');
 
     useEffect(() => {
@@ -72,6 +72,7 @@ function HomePage() {
             try {
                 setLoadingBuddies(true);
                 const usersCollectionRef = collection(db, 'users');
+                // You might want to sort these or limit them differently if you have many users
                 const q = query(usersCollectionRef, limit(7));
                 const querySnapshot = await getDocs(q);
 
@@ -80,6 +81,7 @@ function HomePage() {
                     ...doc.data()
                 }));
 
+                // Filter out the current user from the buddies list
                 const filteredBuddies = currentUser ? fetchedBuddies.filter(buddy => buddy.id !== currentUser.uid) : fetchedBuddies;
 
                 setBuddies(filteredBuddies);
@@ -125,8 +127,8 @@ function HomePage() {
                     {trips.map(trip => (
                         <Link to={`/trips/${trip.id}`} key={trip.id}
                             className="flex-shrink-0 w-64 md:w-80 trip-card-link
-                                      transform transition duration-300 ease-in-out
-                                      hover:scale-105 hover:shadow-lg"
+                                       transform transition duration-300 ease-in-out
+                                       hover:scale-105 hover:shadow-lg"
                         >
                             <div className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col h-full">
                                 <img
@@ -147,7 +149,22 @@ function HomePage() {
                             </div>
                         </Link>
                     ))}
+
+                    {/* NEW: "View All Trips" button/card */}
+                    <div className="flex-shrink-0 w-64 md:w-80 bg-gray-100 rounded-lg shadow-md flex flex-col items-center justify-center p-4">
+                        <button
+                            onClick={() => navigate('/explore')} // Navigate to /explore page
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors text-center text-lg flex items-center justify-center"
+                        >
+                            View All Trips
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block ml-3" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                <path fillRule="evenodd" d="M4.293 15.707a1 1 0 010-1.414L8.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
+
                 <h2 className="text-3xl font-bold text-gray-800 mt-10 mb-6">Find a travel buddy</h2>
                 {loadingBuddies && <p className="text-center text-gray-600">Loading buddies...</p>}
                 {errorBuddies && <p className="text-center text-red-500">{errorBuddies}</p>}
