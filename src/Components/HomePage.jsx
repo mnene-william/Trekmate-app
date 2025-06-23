@@ -73,7 +73,7 @@ function HomePage() {
                 setLoadingBuddies(true);
                 const usersCollectionRef = collection(db, 'users');
                 // You might want to sort these or limit them differently if you have many users
-                const q = query(usersCollectionRef, limit(7));
+                const q = query(usersCollectionRef, limit(9));
                 const querySnapshot = await getDocs(q);
 
                 const fetchedBuddies = querySnapshot.docs.map(doc => ({
