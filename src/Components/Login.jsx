@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../firebase'; // Assuming 'auth' is exported from your firebase config
 
 function Login() {
     const [email, setEmail] = useState('');
@@ -12,7 +12,7 @@ function Login() {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        setError('');
+        setError(''); // Clear previous errors
         setLoading(true);
 
         try {
@@ -20,7 +20,7 @@ function Login() {
             console.log('User logged in successfully!');
             // You could add a success message state here if you want to show it briefly before navigating
             // setMessage('Login successful! Redirecting...');
-            navigate('/HomePage'); // Navigate to HomePage after successful login
+            navigate('/homepage'); // Navigate to HomePage after successful login
         } catch (err) {
             console.error('Error logging in:', err);
             let errorMessage = 'Failed to log in. Please try again.'; // Default generic message
@@ -44,86 +44,104 @@ function Login() {
     };
 
     return (
-        <div className="relative flex size-full min-h-screen flex-col bg-white group/design-root overflow-x-hidden" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
-            <div className="layout-container flex h-full grow flex-col">
-                <div className="flex flex-1 justify-center items-center px-4 sm:px-10 md:px-20 lg:px-40 py-5">
-                    <div className="layout-content-container flex flex-col w-full max-w-[512px] py-5 flex-1">
-
-                        {/* NEW: Back Home Button */}
-                        <div className="mb-4 self-start"> {/* self-start aligns it to the left within its flex container */}
-                            <button
-                                onClick={() => navigate('/homepage')} // Navigate directly to /homepage
-                                className="flex items-center text-gray-700 hover:text-blue-600 transition-colors duration-200 focus:outline-none"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                                Back Home
-                            </button>
-                        </div>
-
-                        <h2 className="text-[#111418] tracking-light text-[28px] font-bold leading-tight px-4 text-center pb-3 pt-5">
-                            Welcome back
-                        </h2>
-
-                        {/* Error Message Display (styled like in SignUp/TripDetails) */}
-                        {error && (
-                            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-md mx-auto max-w-[480px]" role="alert">
-                                <p className="font-bold">Error!</p>
-                                <p>{error}</p>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleLogin} className="flex flex-col w-full max-w-[480px] mx-auto gap-4 px-4 py-3">
-                            <label className="flex flex-col flex-1 w-full">
-                                <p className="text-[#111418] text-base font-medium leading-normal pb-2">Email</p>
-                                <input
-                                    placeholder="Email"
-                                    className="form-input flex w-full flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-14 placeholder:text-[#60758a] p-4 text-base font-normal leading-normal"
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </label>
-
-                            <label className="flex flex-col flex-1 w-full">
-                                <p className="text-[#111418] text-base font-medium leading-normal pb-2">Password</p>
-                                <input
-                                    placeholder="Password"
-                                    className="form-input flex w-full flex-1 resize-none overflow-hidden rounded-lg text-[#111418] focus:outline-0 focus:ring-0 border-none bg-[#f0f2f5] focus:border-none h-14 placeholder:text-[#60758a] p-4 text-base font-normal leading-normal"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                            </label>
-
-                            {/* Forgot password link - centered and styled to match form width */}
-                            <p className="text-[#60758a] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-right w-full max-w-[480px] mx-auto">
-                                <Link to="/forgot-password" className="underline hover:text-blue-700 transition-colors">Forgot password?</Link>
-                            </p>
-
-                            <div className="flex px-4 py-3 w-full">
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-14 px-5 flex-1 bg-[#0c7ff2] text-white text-base font-bold leading-normal tracking-[0.015em] disabled:opacity-50 hover:bg-blue-600 transition-colors"
-                                >
-                                    <span className="truncate">{loading ? 'Logging in...' : 'Log in'}</span>
-                                </button>
-                            </div>
-                        </form>
-
-                        {/* Don't have an account link - centered and styled to match form width */}
-                        <p className="text-[#60758a] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center mx-auto max-w-[480px]">
-                            Don't have an account?{' '}
-                            <Link to="/signup" className="underline text-[#1b6bfe] font-medium hover:text-blue-700 transition-colors">
-                                Sign up
-                            </Link>
-                        </p>
-                    </div>
+        // Main container with gradient background and centered content
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 p-4">
+            {/* Card container with animations */}
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105">
+                {/* Back Home Button */}
+                <div className="mb-4 self-start">
+                    <button
+                        onClick={() => navigate('/homepage')}
+                        className="flex items-center text-gray-700 hover:text-blue-600 transition-colors duration-200 focus:outline-none"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back Home
+                    </button>
                 </div>
+
+                {/* Title with animation */}
+                <h2 className="text-3xl font-bold text-center text-gray-800 mb-6 animate-fade-in-down">Welcome back</h2>
+
+                {/* Error Message Display with animation */}
+                {error && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md animate-fade-in-up" role="alert">
+                        <p className="font-bold">Error!</p>
+                        <p>{error}</p>
+                    </div>
+                )}
+
+                <form onSubmit={handleLogin} className="space-y-6">
+                    {/* Email Input with floating label */}
+                    <div className="relative group">
+                        <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 peer"
+                            placeholder=" " // Important for floating label
+                        />
+                        <label
+                            htmlFor="email"
+                            className="absolute left-4 top-3 text-gray-500 text-base transition-all duration-300
+                                       peer-placeholder-shown:text-base peer-placeholder-shown:top-3
+                                       peer-focus:-top-2 peer-focus:text-sm peer-focus:text-blue-600 peer-focus:bg-white peer-focus:px-1"
+                        >
+                            Email
+                        </label>
+                    </div>
+
+                    {/* Password Input with floating label */}
+                    <div className="relative group">
+                        <input
+                            type="password"
+                            id="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 peer"
+                            placeholder=" " // Important for floating label
+                        />
+                        <label
+                            htmlFor="password"
+                            className="absolute left-4 top-3 text-gray-500 text-base transition-all duration-300
+                                       peer-placeholder-shown:text-base peer-placeholder-shown:top-3
+                                       peer-focus:-top-2 peer-focus:text-sm peer-focus:text-blue-600 peer-focus:bg-white peer-focus:px-1"
+                        >
+                            Password
+                        </label>
+                    </div>
+
+                    {/* Forgot password link */}
+                    <p className="text-gray-600 text-sm text-right mt-2">
+                        <Link to="/forgot-password" className="text-blue-600 font-semibold hover:underline">
+                            Forgot password?
+                        </Link>
+                    </p>
+
+                    {/* Submit Button with animation */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg
+                                   hover:bg-blue-700 transition-all duration-300 transform hover:scale-105
+                                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                   disabled:opacity-50 disabled:cursor-not-allowed animate-bounce-in"
+                    >
+                        {loading ? 'Logging in...' : 'Log in'}
+                    </button>
+                </form>
+
+                {/* Don't have an account link */}
+                <p className="text-center text-gray-600 mt-6">
+                    Don't have an account?{' '}
+                    <Link to="/signup" className="text-blue-600 font-semibold hover:underline">
+                        Sign up
+                    </Link>
+                </p>
             </div>
         </div>
     );
