@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Context/AuthContext';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, or } from 'firebase/firestore'; // Import 'or' for multiple conditions if needed
+import { collection, query, where, getDocs, or } from 'firebase/firestore'; 
 import { useNavigate, Link } from 'react-router-dom';
 
 function MyTripsPage() {
@@ -22,11 +22,9 @@ function MyTripsPage() {
             }
 
             try {
-                // Query for trips where the current user is either the creator OR a participant
                 const tripsRef = collection(db, 'trips');
                 const q = query(
                     tripsRef,
-                    // Use 'or' if you want to show both created and joined trips
                     or(
                         where("creatorId", "==", currentUser.uid),
                         where("participants", "array-contains", currentUser.uid)

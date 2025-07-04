@@ -72,8 +72,7 @@ function HomePage() {
             try {
                 setLoadingBuddies(true);
                 const usersCollectionRef = collection(db, 'users');
-                // You might want to sort these or limit them differently if you have many users
-                const q = query(usersCollectionRef, limit(9));
+                const q = query(usersCollectionRef);
                 const querySnapshot = await getDocs(q);
 
                 const fetchedBuddies = querySnapshot.docs.map(doc => ({
@@ -81,7 +80,7 @@ function HomePage() {
                     ...doc.data()
                 }));
 
-                // Filter out the current user from the buddies list
+         
                 const filteredBuddies = currentUser ? fetchedBuddies.filter(buddy => buddy.id !== currentUser.uid) : fetchedBuddies;
 
                 setBuddies(filteredBuddies);
@@ -150,7 +149,7 @@ function HomePage() {
                         </Link>
                     ))}
 
-                    {/* NEW: "View All Trips" button/card */}
+                    
                     <div className="flex-shrink-0 w-64 md:w-80 bg-gray-100 rounded-lg shadow-md flex flex-col items-center justify-center p-4">
                         <button
                             onClick={() => navigate('/explore')} // Navigate to /explore page

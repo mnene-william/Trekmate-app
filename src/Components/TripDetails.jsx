@@ -5,16 +5,18 @@ import { doc, getDoc, getDocs, updateDoc, arrayUnion, arrayRemove, collection, q
 import Header from './Header';
 import { useAuth } from '../Context/AuthContext';
 
+
 function TripDetails() {
     const { tripId } = useParams();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
 
+
     const [trip, setTrip] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
-    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false); // New state for confirmation modal
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
 
     const [isJoining, setIsJoining] = useState(false);
     const [isJoined, setIsJoined] = useState(false);
@@ -27,9 +29,9 @@ function TripDetails() {
     const [userLiked, setUserLiked] = useState(false);
     const [loadingComments, setLoadingComments] = useState(true);
     const [loadingLikes, setLoadingLikes] = useState(true);
+    const [shareMessage, setShareMessage] = useState(''); 
 
-
-    // Effect for fetching and subscribing to main trip details
+    // Fetch trip details, participants, and determine user's relationship to trip
     useEffect(() => {
         if (!tripId) {
             setError("No trip ID provided.");
@@ -46,8 +48,6 @@ function TripDetails() {
                 setTrip(data);
                 setError('');
 
-                console.log("Current Trip Data (from Firestore - onSnapshot):", data);
-
                 const currentParticipants = data.participants || [];
 
                 if (currentUser) {
@@ -58,9 +58,11 @@ function TripDetails() {
                     setIsCreator(false);
                 }
 
+                // Fetch participant usernames
                 if (currentParticipants.length > 0) {
                     const usersRef = collection(db, 'users');
-                    const q = query(usersRef, where('uid', 'in', currentParticipants));
+                    // Firestore 'in' query supports up to 10 values. Slice to prevent errors.
+                    const q = query(usersRef, where('uid', 'in', currentParticipants.slice(0, 10)));
                     const usersSnapshot = await getDocs(q);
 
                     const usernames = {};
@@ -72,7 +74,6 @@ function TripDetails() {
                     setParticipantUsernames({});
                 }
             } else {
-                console.log("No such trip document!");
                 setTrip(null);
                 setError('Trip not found.');
             }
@@ -86,8 +87,7 @@ function TripDetails() {
         return () => unsubscribeTrip();
     }, [tripId, currentUser]);
 
-
-    // Effect for comments
+    // Fetch comments for the trip
     useEffect(() => {
         if (!tripId) {
             setLoadingComments(false);
@@ -114,8 +114,7 @@ function TripDetails() {
         return () => unsubscribeComments();
     }, [tripId]);
 
-
-    // Effect for likes
+    // Fetch likes for the trip
     useEffect(() => {
         if (!tripId) {
             setLoadingLikes(false);
@@ -141,13 +140,14 @@ function TripDetails() {
         return () => unsubscribeLikes();
     }, [tripId, currentUser]);
 
+    // Handle navigation to edit trip page
     const handleManageTrip = () => {
         if (trip && trip.id) {
             navigate(`/create-trip/${trip.id}`);
         }
     };
 
-    // This function now just *triggers* the modal
+    // Show delete confirmation modal
     const handleDeleteTripPrompt = () => {
         if (!currentUser) {
             setError("You must be logged in to delete a trip");
@@ -157,29 +157,30 @@ function TripDetails() {
             setError("You are not authorized to delete this trip.");
             return;
         }
-        setShowDeleteConfirmModal(true); // Show the confirmation modal
-        setError(''); // Clear any previous errors when opening modal
-        setSuccessMessage(''); // Clear any previous success messages
+        setShowDeleteConfirmModal(true);
+        setError('');
+        setSuccessMessage('');
     };
 
-    // This function performs the actual deletion
+    // Confirm and perform trip deletion
     const confirmDeleteTrip = async () => {
-        setShowDeleteConfirmModal(false); // Close the modal immediately
+        setShowDeleteConfirmModal(false);
         try {
             await deleteDoc(doc(db, 'trips', tripId));
-            setSuccessMessage('Trip deleted successfully!'); // Set success message
-            setError(''); // Clear any errors
-            setTimeout(() => { // Clear message after 3 seconds and navigate
+            setSuccessMessage('Trip deleted successfully!');
+            setError('');
+            setTimeout(() => {
                 setSuccessMessage('');
                 navigate('/homepage');
             }, 3000);
         } catch (err) {
             console.error("Error deleting trip:", err);
             setError('Failed to delete trip: ' + err.message);
-            setSuccessMessage(''); // Ensure success message is clear on error
+            setSuccessMessage('');
         }
     };
 
+    // Handle joining or leaving a trip
     const handleJoinLeaveTrip = async () => {
         if (!currentUser) {
             setError("You must be logged in to join or leave a trip.");
@@ -198,11 +199,9 @@ function TripDetails() {
             if (isJoined) {
                 await updateDoc(tripDocRef, { participants: arrayRemove(currentUser.uid) });
                 setSuccessMessage('You have successfully left the trip!');
-                console.log("User left the trip:", trip.title);
             } else {
                 await updateDoc(tripDocRef, { participants: arrayUnion(currentUser.uid) });
                 setSuccessMessage('You have successfully joined the trip!');
-                console.log("User joined the trip", trip.title);
             }
             setTimeout(() => setSuccessMessage(''), 3000);
 
@@ -214,12 +213,13 @@ function TripDetails() {
         }
     };
 
+    // Handle posting a new comment
     const handlePostComment = async (e) => {
         e.preventDefault();
 
         if (!newCommentText.trim() || !currentUser) {
-            setError("Please enter a comment and make sure you are logged in."); // Changed from alert
-            setTimeout(() => setError(''), 3000); // Clear error after 3 seconds
+            setError("Please enter a comment and make sure you are logged in.");
+            setTimeout(() => setError(''), 3000);
             return;
         }
         setError('');
@@ -247,10 +247,11 @@ function TripDetails() {
         }
     };
 
+    // Handle liking/unliking a trip
     const handleLikeToggle = async () => {
         if (!currentUser) {
-            setError("Please log in to like this trip."); // Changed from alert
-            setTimeout(() => setError(''), 3000); // Clear error after 3 seconds
+            setError("Please log in to like this trip.");
+            setTimeout(() => setError(''), 3000);
             return;
         }
         setError('');
@@ -262,14 +263,12 @@ function TripDetails() {
             if (userLiked) {
                 await deleteDoc(likeDocRef);
                 setSuccessMessage('Trip unliked!');
-                console.log("Trip unliked!");
             } else {
                 await setDoc(likeDocRef, {
                     userId: currentUser.uid,
                     timestamp: serverTimestamp(),
                 });
                 setSuccessMessage('Trip liked!');
-                console.log("Trip liked!");
             }
             setTimeout(() => setSuccessMessage(''), 3000);
         } catch (err) {
@@ -277,6 +276,36 @@ function TripDetails() {
             setError("Failed to update like status.");
         }
     };
+
+    
+    const handleShareTrip = async () => {
+        const tripUrl = `${window.location.origin}/trips/${tripId}`; 
+        try {
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) { 
+                await navigator.clipboard.writeText(tripUrl);
+                setShareMessage('Link copied to clipboard!');
+            } else {
+                
+                const textArea = document.createElement('textarea');
+                textArea.value = tripUrl;
+                textArea.style.position = 'fixed'; 
+                textArea.style.opacity = '0'; 
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy'); 
+                document.body.removeChild(textArea);
+                setShareMessage('Link copied to clipboard! (Fallback)'); 
+            }
+            setTimeout(() => setShareMessage(''), 3000); 
+        } catch (err) {
+            console.error('Failed to copy trip link:', err);
+            setShareMessage('Failed to copy link. Please copy manually: ' + tripUrl);
+            setTimeout(() => setShareMessage(''), 5000); 
+        }
+    };
+
 
     if (loading || loadingComments || loadingLikes) {
         return (
@@ -289,7 +318,7 @@ function TripDetails() {
         );
     }
 
-    if (error && !successMessage) { // Only show global error if no success message is active
+    if (error && !successMessage) {
         return (
             <>
                 <Header />
@@ -332,7 +361,7 @@ function TripDetails() {
     return (
         <>
             <Header />
-            <div className="container mx-auto p-4 sm:p-8 max-w-4xl lg:max-w-5xl" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+            <div className="container mx-auto p-4 sm:p-8 max-w-4xl lg:max-w-5xl bg-white text-gray-900 rounded-lg shadow-lg my-8"> 
 
                 {/* Success Message Display */}
                 {successMessage && (
@@ -342,13 +371,19 @@ function TripDetails() {
                     </div>
                 )}
                 {/* Error Message Display (local) */}
-                {error && ( // Keep error display here for local errors that don't block entire page
+                {error && (
                     <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded shadow-md" role="alert">
                         <p className="font-bold">Error!</p>
                         <p>{error}</p>
                     </div>
                 )}
-
+                {/* Share Message Display */}
+                {shareMessage && (
+                    <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded shadow-md" role="alert">
+                        <p className="font-bold">Share Link:</p>
+                        <p>{shareMessage}</p>
+                    </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                     <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 w-full sm:w-auto">
@@ -360,13 +395,17 @@ function TripDetails() {
                                 <>
                                     <button
                                         onClick={handleManageTrip}
-                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 w-full sm:w-auto"
+                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200
+                                        bg-blue-600 hover:bg-blue-700
+                                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 w-full sm:w-auto"
                                     >
                                         Edit Trip
                                     </button>
                                     <button
-                                        onClick={handleDeleteTripPrompt} // Now calls the prompt function
-                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 w-full sm:w-auto"
+                                        onClick={handleDeleteTripPrompt}
+                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200
+                                        bg-red-600 hover:bg-red-700
+                                        focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 w-full sm:w-auto"
                                     >
                                         Delete Trip
                                     </button>
@@ -380,6 +419,15 @@ function TripDetails() {
                                     {primaryButtonText}
                                 </button>
                             )}
+                            {/* Share Trip Button */}
+                            <button
+                                onClick={handleShareTrip}
+                                className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200
+                                bg-gray-600 hover:bg-gray-700
+                                focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 w-full sm:w-auto"
+                            >
+                                Share Trip
+                            </button>
                         </div>
                     )}
                 </div>
@@ -417,7 +465,7 @@ function TripDetails() {
                         <ul className="list-disc list-inside text-gray-700 text-lg space-y-2">
                             {trip.participants.map((participantId, index) => (
                                 <li key={index}>
-                                    <span onClick={() => navigate(`/users/${participantId}`)} className="cursor-pointer text-blue-600 underline">
+                                    <span onClick={() => navigate(`/users/${participantId}`)} className="cursor-pointer text-blue-600 underline hover:no-underline">
                                         {participantUsernames[participantId] || participantId}
                                     </span>
                                 </li>
@@ -433,11 +481,13 @@ function TripDetails() {
                 )}
 
                 {/* Like Button & Count */}
-                <div className="flex items-center space-x-4 mt-6 border-t pt-6">
+                <div className="flex items-center space-x-4 mt-6 border-t border-gray-200 pt-6">
                     <button
                         onClick={handleLikeToggle}
                         className={`flex items-center px-4 py-2 rounded-full transition-colors duration-200 ease-in-out ${
-                            userLiked ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600'
+                            userLiked
+                                ? 'bg-red-500 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-red-100 hover:text-red-600'
                         }`}
                         disabled={!currentUser}
                     >
@@ -468,7 +518,7 @@ function TripDetails() {
                 </div>
 
                 {/* Comments Section */}
-                <h2 className="text-3xl font-bold text-gray-800 mt-10 mb-6 border-t pt-8">Comments</h2>
+                <h2 className="text-3xl font-bold text-gray-800 mt-10 mb-6 border-t border-gray-200 pt-8">Comments</h2>
                 <div className="comments-section bg-gray-100 p-5 rounded-lg shadow-inner">
                     {loadingComments && <p className="text-center text-gray-600">Loading comments...</p>}
                     {!loadingComments && comments.length === 0 && <p className="text-center text-gray-600">No comments yet. Be the first to share your thoughts!</p>}
@@ -501,12 +551,16 @@ function TripDetails() {
                                 value={newCommentText}
                                 onChange={(e) => setNewCommentText(e.target.value)}
                                 placeholder="Add a comment..."
-                                className="flex-grow border border-gray-300 rounded-lg p-3 text-gray-800 focus:ring-blue-500 focus:border-blue-500 shadow-sm w-full"
+                                className="flex-grow border border-gray-300 rounded-lg p-3
+                                text-gray-800 bg-white
+                                focus:ring-blue-500 focus:border-blue-500 shadow-sm w-full"
                                 disabled={!currentUser}
                             />
                             <button
                                 type="submit"
-                                className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                                className="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700
+                                transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                                 disabled={!currentUser || !newCommentText.trim()}
                             >
                                 Post Comment
@@ -533,7 +587,8 @@ function TripDetails() {
                         <div className="flex justify-end space-x-3">
                             <button
                                 onClick={() => setShowDeleteConfirmModal(false)}
-                                className="px-5 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                                className="px-5 py-2 border border-gray-300 rounded-md text-gray-700
+                                hover:bg-gray-100 transition-colors duration-200"
                             >
                                 Cancel
                             </button>
