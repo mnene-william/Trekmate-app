@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, getDoc, getDocs, updateDoc, arrayUnion, arrayRemove, collection, query, where, deleteDoc, onSnapshot, setDoc, orderBy, addDoc, serverTimestamp} from 'firebase/firestore';
 import Header from './Header';
 import { useAuth } from '../Context/AuthContext';
 
-
 function TripDetails() {
     const { tripId } = useParams();
     const { currentUser } = useAuth();
     const navigate = useNavigate();
-
 
     const [trip, setTrip] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -29,7 +27,27 @@ function TripDetails() {
     const [userLiked, setUserLiked] = useState(false);
     const [loadingComments, setLoadingComments] = useState(true);
     const [loadingLikes, setLoadingLikes] = useState(true);
-    const [shareMessage, setShareMessage] = useState(''); 
+    const [shareMessage, setShareMessage] = useState(''); // State for clipboard copy feedback
+
+    const [showShareOptions, setShowShareOptions] = useState(false); // State for showing share options
+    const shareButtonRef = useRef(null); // Ref for the share button to position the dropdown
+    const shareOptionsRef = useRef(null); // Ref for the share options dropdown itself
+
+    // Effect to close share options when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            // Close if clicked outside the share button and outside the share options dropdown
+            if (shareOptionsRef.current && !shareOptionsRef.current.contains(event.target) &&
+                shareButtonRef.current && !shareButtonRef.current.contains(event.target)) {
+                setShowShareOptions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [shareOptionsRef, shareButtonRef]);
+
 
     // Fetch trip details, participants, and determine user's relationship to trip
     useEffect(() => {
@@ -277,35 +295,55 @@ function TripDetails() {
         }
     };
 
-    
-    const handleShareTrip = async () => {
-        const tripUrl = `${window.location.origin}/trips/${tripId}`; 
+    // Function to copy trip link to clipboard
+    const copyTripLink = async () => {
+        const tripUrl = `${window.location.origin}/trips/${tripId}`;
         try {
-            
-            if (navigator.clipboard && navigator.clipboard.writeText) { 
+            if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(tripUrl);
                 setShareMessage('Link copied to clipboard!');
             } else {
-                
                 const textArea = document.createElement('textarea');
                 textArea.value = tripUrl;
-                textArea.style.position = 'fixed'; 
-                textArea.style.opacity = '0'; 
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
                 document.body.appendChild(textArea);
                 textArea.focus();
                 textArea.select();
-                document.execCommand('copy'); 
+                document.execCommand('copy');
                 document.body.removeChild(textArea);
-                setShareMessage('Link copied to clipboard! (Fallback)'); 
+                setShareMessage('Link copied to clipboard! (Fallback)');
             }
-            setTimeout(() => setShareMessage(''), 3000); 
+            setTimeout(() => setShareMessage(''), 3000);
+            setShowShareOptions(false); // Close options after copying
         } catch (err) {
             console.error('Failed to copy trip link:', err);
             setShareMessage('Failed to copy link. Please copy manually: ' + tripUrl);
-            setTimeout(() => setShareMessage(''), 5000); 
+            setTimeout(() => setShareMessage(''), 5000);
         }
     };
 
+    // Functions to share on specific platforms
+    const shareOnTwitter = () => {
+        const tripUrl = `${window.location.origin}/trips/${tripId}`;
+        const text = encodeURIComponent(`Check out this amazing trip on TrekMate: ${trip.title}!`);
+        window.open(`https://twitter.com/intent/tweet?url=${tripUrl}&text=${text}`, '_blank');
+        setShowShareOptions(false);
+    };
+
+    const shareOnFacebook = () => {
+        const tripUrl = `${window.location.origin}/trips/${tripId}`;
+        // Facebook's share dialog prefers the URL directly
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${tripUrl}`, '_blank');
+        setShowShareOptions(false);
+    };
+
+    const shareOnWhatsApp = () => {
+        const tripUrl = `${window.location.origin}/trips/${tripId}`;
+        const text = encodeURIComponent(`Check out this amazing trip on TrekMate: ${trip.title}! ${tripUrl}`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+        setShowShareOptions(false);
+    };
 
     if (loading || loadingComments || loadingLikes) {
         return (
@@ -322,7 +360,7 @@ function TripDetails() {
         return (
             <>
                 <Header />
-                <div className="container mx-auto p-4 text-center mt-8">
+                <div className="container mx-auto p-4 text-center mt-8 bg-white text-gray-900 rounded-lg shadow-md">
                     <p className="text-red-500 font-semibold">{error}</p>
                     <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Go Back</button>
                 </div>
@@ -334,7 +372,7 @@ function TripDetails() {
         return (
             <>
                 <Header />
-                <div className="container mx-auto p-4 text-center mt-8">
+                <div className="container mx-auto p-4 text-center mt-8 bg-white text-gray-900 rounded-lg shadow-md">
                     <p className="text-gray-600">Trip details not available.</p>
                     <button onClick={() => navigate('/homepage')} className="mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Back Home</button>
                 </div>
@@ -361,7 +399,7 @@ function TripDetails() {
     return (
         <>
             <Header />
-            <div className="container mx-auto p-4 sm:p-8 max-w-4xl lg:max-w-5xl bg-white text-gray-900 rounded-lg shadow-lg my-8"> 
+            <div className="container mx-auto p-4 sm:p-8 max-w-4xl lg:max-w-5xl bg-white text-gray-900 rounded-lg shadow-lg my-8">
 
                 {/* Success Message Display */}
                 {successMessage && (
@@ -377,7 +415,7 @@ function TripDetails() {
                         <p>{error}</p>
                     </div>
                 )}
-                {/* Share Message Display */}
+                {/* Share Message Display (for clipboard copy) */}
                 {shareMessage && (
                     <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded shadow-md" role="alert">
                         <p className="font-bold">Share Link:</p>
@@ -385,7 +423,31 @@ function TripDetails() {
                     </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                {/* Delete Confirmation Modal */}
+                {showDeleteConfirmModal && (
+                    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm mx-auto text-center">
+                            <h3 className="text-lg font-semibold mb-4 text-gray-900">Confirm Deletion</h3>
+                            <p className="mb-6 text-gray-700">Are you sure you want to delete this trip? This action cannot be undone.</p>
+                            <div className="flex justify-center space-x-4">
+                                <button
+                                    onClick={confirmDeleteTrip}
+                                    className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteConfirmModal(false)}
+                                    className="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4 relative"> {/* Added relative for dropdown positioning */}
                     <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 w-full sm:w-auto">
                         &larr; Back to Trips
                     </button>
@@ -395,17 +457,13 @@ function TripDetails() {
                                 <>
                                     <button
                                         onClick={handleManageTrip}
-                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200
-                                        bg-blue-600 hover:bg-blue-700
-                                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 w-full sm:w-auto"
+                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 w-full sm:w-auto"
                                     >
                                         Edit Trip
                                     </button>
                                     <button
                                         onClick={handleDeleteTripPrompt}
-                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200
-                                        bg-red-600 hover:bg-red-700
-                                        focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 w-full sm:w-auto"
+                                        className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 w-full sm:w-auto"
                                     >
                                         Delete Trip
                                     </button>
@@ -419,15 +477,69 @@ function TripDetails() {
                                     {primaryButtonText}
                                 </button>
                             )}
-                            {/* Share Trip Button */}
+                            {/* Share Trip Button - now toggles options */}
                             <button
-                                onClick={handleShareTrip}
+                                ref={shareButtonRef} 
+                                onClick={() => setShowShareOptions(!showShareOptions)}
                                 className="px-6 py-3 text-white font-semibold rounded-lg shadow-md transition-colors duration-200
                                 bg-gray-600 hover:bg-gray-700
-                                focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 w-full sm:w-auto"
+                                focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 w-full sm:w-auto flex items-center justify-center"
                             >
                                 Share Trip
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
                             </button>
+
+                            {/* Share Options Dropdown with Icons */}
+                            {showShareOptions && (
+                                <div
+                                    ref={shareOptionsRef} // Attach ref to the dropdown
+                                    className="absolute right-0 mt-2 top-full bg-white border border-gray-200 rounded-lg shadow-lg z-10 w-48 py-2 transform origin-top-right scale-y-100 transition-transform duration-200 ease-out"
+                                >
+                                    {/* Copy Link */}
+                                    <button
+                                        onClick={copyTripLink}
+                                        className="flex items-center w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                                        </svg>
+                                        Copy Link
+                                    </button>
+                                    {/* Twitter */}
+                                    <button
+                                        onClick={shareOnTwitter}
+                                        className="flex items-center w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M22.2 5.6c-.7.3-1.4.5-2.2.6.8-.5 1.4-1.2 1.7-2.1-.7.4-1.5.7-2.3.9-.7-.7-1.7-1.2-2.8-1.2-2.1 0-3.8 1.7-3.8 3.8 0 .3 0 .6.1.9-3.1-.2-5.9-1.6-7.8-3.9-.3.5-.5 1-.5 1.7 0 1.3.7 2.4 1.7 3.1-.6 0-1.2-.2-1.7-.5v.1c0 1.8 1.3 3.3 3 3.6-.3.1-.7.1-1 .1-.2 0-.4 0-.6-.1.5 1.5 1.8 2.6 3.4 2.9-1.3 1-2.9 1.6-4.7 1.6-.3 0-.6 0-.9-.1 1.7 1.1 3.7 1.8 5.9 1.8 7.1 0 11-5.9 11-11.7 0-.2 0-.4 0-.5.8-.6 1.5-1.3 2-2.1z"/>
+                                        </svg>
+                                        Share on Twitter
+                                    </button>
+                                    {/* Facebook */}
+                                    <button
+                                        onClick={shareOnFacebook}
+                                        className="flex items-center w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878V14.25H7.5V12h2.938V9.75c0-2.906 1.77-4.508 4.375-4.508 1.246 0 2.327.092 2.646.134v2.875h-1.719c-1.355 0-1.618.644-1.618 1.585V12h3.235l-.52 2.25h-2.715v7.628C18.343 21.128 22 16.991 22 12c0-5.523-4.477-10-10-10z"/>
+                                        </svg>
+                                        Share on Facebook
+                                    </button>
+                                    {/* WhatsApp */}
+                                    <button
+                                        onClick={shareOnWhatsApp}
+                                        className="flex items-center w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-green-500" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.475-2.39-.015-.297.049-.564.2-.718.15-.149.3-.223.447-.298.149-.074.2-.173.297-.372.099-.198.049-.372-.025-.521-.074-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.198-.015-.42-.015-.644-.015-.242 0-.66.099-.817.297-.15.198-.58.579-.58 1.416 0 .816.596 1.633.67 1.732.074.099 1.164 1.758 2.809 2.524.471.223.867.372 1.164.471.42.149.618.124.767.074.242-.074.75-.307 1.099-.456.349-.149.596-.223.793-.372.198-.148.3-.297.447-.495.148-.198.222-.372.222-.521 0-.149-.074-.298-.173-.396zm-5.188-9.176c-3.237 0-6.195 1.589-8.068 4.148L0 24l6.308-1.654a9.718 9.718 0 0 0 4.162 1.026h.005c5.384 0 9.764-4.38 9.769-9.762.002-5.385-4.379-9.763-9.764-9.763z"/>
+                                        </svg>
+                                        Share on WhatsApp
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -574,34 +686,6 @@ function TripDetails() {
                 </div>
 
             </div>
-
-            {/* Custom Delete Confirmation Modal */}
-            {showDeleteConfirmModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-                    <div className="bg-white rounded-lg shadow-xl p-6 sm:p-8 w-full max-w-sm">
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Deletion</h3>
-                        <p className="text-gray-700 mb-6">
-                            Are you sure you want to delete this trip?
-                            <br/><strong className="text-red-600">This action cannot be undone.</strong>
-                        </p>
-                        <div className="flex justify-end space-x-3">
-                            <button
-                                onClick={() => setShowDeleteConfirmModal(false)}
-                                className="px-5 py-2 border border-gray-300 rounded-md text-gray-700
-                                hover:bg-gray-100 transition-colors duration-200"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDeleteTrip}
-                                className="px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 }

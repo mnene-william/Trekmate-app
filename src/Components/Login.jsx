@@ -18,8 +18,7 @@ function Login() {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             console.log('User logged in successfully!');
-            // You could add a success message state here if you want to show it briefly before navigating
-            // setMessage('Login successful! Redirecting...');
+
             navigate('/homepage'); // Navigate to HomePage after successful login
         } catch (err) {
             console.error('Error logging in:', err);
@@ -34,7 +33,7 @@ function Login() {
                 errorMessage = 'Failed to log in: ' + err.message;
             }
             setError(errorMessage);
-            // Clear the error message after 5 seconds for better UX
+            
             setTimeout(() => {
                 setError('');
             }, 5000);
